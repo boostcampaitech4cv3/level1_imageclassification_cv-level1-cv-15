@@ -3,6 +3,8 @@
 ## Working Process with Time line
 ---
 
+argparse : https://junha1125.github.io/blog/ubuntu-python-algorithm/2020-05-14-argparse/
+
 ### 성수
 - 1027
     - gitignore 추가
@@ -20,18 +22,9 @@
             if not os.path.isdir(save_dir):
                 os.makedirs(save_dir)
             
-            # 현재 arguments값을 config.json파일로 dump하기(나중에 hyperparameter값을 알기 위해)
-            with open(os.path.join(save_dir, 'config.json'), 'w', encoding='utf-8') as f:
-                json.dump(vars(args), f, ensure_ascii=False, indent=4)
-            ```
         - model.py 의 Mymodel class 예시 코드 (resnet34) 추가
-### 민수
--
-### 윤재
--
-### 우택 
--
-
+        - argument parser가 아닌 CfgNode를 활용하여 yml파일로 부터 parameter 값을 받아오기
+            
 ---
 
 ## Getting Started    
