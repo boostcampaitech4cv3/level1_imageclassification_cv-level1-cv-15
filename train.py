@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 
 from dataset import MaskBaseDataset   # dataset class import
 from loss import create_criterion
-from model import BaseModel, MyModel  # model.py에서 model class import
+from model import BaseModel, ResNet34, ResNet152  # model.py에서 model class import
 
 def seed_everything(seed):
     torch.manual_seed(seed)
@@ -236,9 +236,9 @@ def train(data_dir, model_dir, args):
                 
                 if val_acc > best_val_acc:
                     print(f"New best model for val accuracy in epoch {epoch}: {val_acc:4.2%}! saving the best model..")
-                    torch.save(model.module.state_dict(), f"{save_dir}/best_{epoch}.pth")
+                    torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
                     best_val_acc = val_acc
-                torch.save(model.module.state_dict(), f"{save_dir}/last_{epoch}.pth")
+                torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
                 print(
                     f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                     f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
@@ -265,7 +265,14 @@ if __name__ == '__main__':
     parser.add_argument('--validation_interval',type=int,default=10, help="Validation interval in training process (default: 10)")
     parser.add_argument('--valid_batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
     
+    '''
+    Models
+
+    ResNet34
+    ResNet152
+    '''
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
+    
     parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer type (default: SGD)')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
     parser.add_argument('--val_ratio', type=float, default=0.2, help='ratio for validaton (default: 0.2)')
