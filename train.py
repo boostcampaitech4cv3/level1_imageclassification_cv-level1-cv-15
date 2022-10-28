@@ -7,14 +7,15 @@ import random
 import re
 from importlib import import_module
 from pathlib import Path
-
+from adamp import AdamP
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
+from loss import FocalLoss
 
-# Tensorboard 쓸거면 주석 풀고 쓰셈
+from timm.scheduler.step_lr import StepLRScheduler
 
 # from torch.utils.tensorboard import SummaryWriter 
 
@@ -148,17 +149,29 @@ def train(data_dir, model_dir, args):
     model = torch.nn.DataParallel(model)
 
     # -- loss & metric
-    criterion = create_criterion(args.criterion)  # default: cross_entropy
+    #criterion = create_criterion(args.criterion)  # default: cross_entropy
+    criterion=FocalLoss(gamma=2)
+    
     opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
     optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.lr,
         weight_decay=5e-4
     )
-    scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    #optimizer=AdamP(model.parameters(),lr=args.lr)
 
+    #scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    scheduler = StepLRScheduler(
+            optimizer,
+            decay_t=args.lr_decay_step,
+            decay_rate=0.5,
+            warmup_lr_init=2e-08,
+            warmup_t=5,
+            t_in_epochs=False,
+        )
     # -- Tensorboard logging
     # logger = SummaryWriter(log_dir=save_dir)
+
 
 
     best_val_acc = 0
@@ -175,12 +188,21 @@ def train(data_dir, model_dir, args):
 
             optimizer.zero_grad()
 
+
+            outs = model(inputs)          
+            loss = criterion(outs, labels)
+            preds = torch.argmax(outs, dim=-1)
+            loss.backward()
+            optimizer.step()
+
+
             outs = model(inputs)
             preds = torch.argmax(outs, dim=-1)
             loss = criterion(outs, labels)
 
             loss.backward()
             optimizer.step()
+
 
             loss_value += loss.item()
             matches += (preds == labels).sum().item()
@@ -193,18 +215,19 @@ def train(data_dir, model_dir, args):
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
 
-                # Tensorboard
-                # logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
-                # logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
-
                 loss_value = 0
                 matches = 0
 
-        scheduler.step()
-        if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
+
+        scheduler.step_update(epoch + 1)
+        #if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
         # val loop
-            with torch.no_grad():
+
+        #if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
+        # val loop
+        with torch.no_grad():
+
                 print("Calculating validation results...")
                 model.eval()
                 val_loss_items = []
@@ -255,26 +278,24 @@ if __name__ == '__main__':
 
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
-    parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
+
+    parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 1)')
     parser.add_argument('--dataset', type=str, default='MaskSplitByProfileDataset', help='dataset augmentation type (default: MaskBaseDataset)')
-    parser.add_argument('--augmentation', type=str, default='BaseAugmentation', help='data augmentation type (default: BaseAugmentation)')
-    parser.add_argument("--resize", nargs="+", type=list, default=[128, 96], help='resize size for image when training')
-    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
+    parser.add_argument('--augmentation', type=str, default='CustomAugmentation', help='data augmentation type (default: BaseAugmentation)')
+    parser.add_argument("--resize", nargs="+", type=list, default=[240, 240], help='resize size for image when training')
+    parser.add_argument('--batch_size', type=int, default=32, help='input batch size for training (default: 64)')
+
     
     # Validation
     parser.add_argument('--validation_interval',type=int,default=10, help="Validation interval in training process (default: 10)")
     parser.add_argument('--valid_batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
     
-    '''
-    Models
 
-    ResNet34
-    ResNet152
-    '''
-    parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
+    parser.add_argument('--model', type=str, default='EfficientNet', help='model type (default: BaseModel)')
     
-    parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer type (default: SGD)')
-    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
+    parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer type (default: SGD)')
+    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 1e-3)')
+
     parser.add_argument('--val_ratio', type=float, default=0.2, help='ratio for validaton (default: 0.2)')
     parser.add_argument('--criterion', type=str, default='cross_entropy', help='criterion type (default: cross_entropy)')
     parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')

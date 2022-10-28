@@ -3,6 +3,41 @@ import torch.nn.functional as F
 import torchvision
 import timm
 
+from efficientnet_pytorch import EfficientNet as EffNet
+
+class EfficientNet(nn.Module):
+    def __init__(
+        self,
+        num_classes,
+        pretrained = True,
+    ):
+        super().__init__()
+
+        if pretrained:
+            self.model = EffNet.from_pretrained("efficientnet-b0")
+        else:
+            self.model = EffNet.from_name("efficientnet-b0")
+
+        self.fc = nn.Linear(1000, num_classes)
+
+    def forward(self, x):
+        """
+        1. 위에서 정의한 모델 아키텍쳐를 forward propagation 을 진행해주세요
+        2. 결과로 나온 output 을 return 해주세요
+        """
+        # x shape: batch_size, 3, 128, 96
+
+        x = self.model(x)
+        # x shape: batch_size, 1000
+
+        x = self.fc(x)
+        # x shape: batch_size, num_classes
+
+        return x
+
+
+
+
 class BaseModel(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
