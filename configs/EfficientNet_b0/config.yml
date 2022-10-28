@@ -1,17 +1,22 @@
+# Train 
+
+train : True
+
 # Model Hyperparams
 
 seed : 42
 epochs : 10
 dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
 augmentation : 'CustomAugmentation'
-resize : [256,192]
-batch_size : 16
-model : "EfficientNet_b7" 
+cropsize : [320,256]
+resize : [240,240]
+batch_size : 32
+model : "EfficientNet_b0" 
 
 # Training
 
 optimizer : 'Adam'
-lr : 0.00002
+lr : 0.0002
 val_ratio : 0.2
 criterion : 'cross_entropy'
 lr_decay_step : 20
@@ -23,13 +28,26 @@ name : 'exp'
 validation_interval : 1
 valid_batch_size : 64
 
+# Loss
+
+sampler : 'softmax_triplet' # softmax, triplet, triplet hard
+num_instance : 4
+loss_type : 'triplet'
+feat_norm : False
+ID_loss_weight : 0.5
+triplet_loss_weight : 0.5
+label_smooth : False
+margin : 0.0
+
 # Test
+
 test_data_dir : '/opt/ml/input/data/eval'
 test_batch_size : 64
 test_model : 'exp16'
+
 # Container environment
 
 data_dir : '/opt/ml/input/data/train/images'
-model_dir : './model/EfficientNet_b7'
+model_dir : './model/EfficientNet_b0'
 output_dir : './output'
 

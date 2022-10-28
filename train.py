@@ -15,6 +15,11 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from config import cfg
 import yaml
+from loss import make_loss
+from .sampler import RandomIdentitySampler
+
+# from torch.cuda import amp
+
 # Tensorboard 쓸거면 주석 풀고 쓰셈
 
 # from torch.utils.tensorboard import SummaryWriter 
@@ -22,6 +27,7 @@ import yaml
 from dataset import MaskBaseDataset   # dataset class import
 from loss.softmax_loss import create_criterion
 from model import BaseModel, ResNet34, ResNet152, EfficientNet_b7  # model.py에서 model class import
+from timm.scheduler.step_lr import StepLRScheduler
 
 def seed_everything(seed):
     torch.manual_seed(seed)
@@ -86,11 +92,11 @@ def increment_path(path, exist_ok=False):
         return f"{path}{n}"
 
 
-def train(data_dir, model_dir, args):
-    seed_everything(args.seed)
+def train(data_dir, model_dir, cfg):
+    seed_everything(cfg.seed)
 
     # model 이란 폴더 안에서 하위폴더의 path index를 매 experiment마다 늘려줌
-    save_dir = increment_path(os.path.join(model_dir, args.name))
+    save_dir = increment_path(os.path.join(model_dir, cfg.name))
 
     # 위의 save_dir 폴더 만들기 
     if not os.path.isdir(save_dir):
@@ -98,23 +104,24 @@ def train(data_dir, model_dir, args):
     
     # 현재 arguments값을 config.json파일로 dump하기(나중에 hyperparameter값을 알기 위해)
     with open(os.path.join(save_dir, 'config.yml'), 'w', encoding='utf-8') as f:
-        yaml.dump(args, f)
+        yaml.dump(cfg, f)
     
     # -- settings
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
     # -- dataset
-    dataset_module = getattr(import_module("dataset"), args.dataset)  # default: MaskBaseDataset
+    dataset_module = getattr(import_module("dataset"), cfg.dataset)  # default: MaskBaseDataset
     dataset = dataset_module(
         data_dir=data_dir,
     )
     num_classes = dataset.num_classes  # 18
 
     # -- augmentation
-    transform_module = getattr(import_module("dataset"), args.augmentation)  # default: BaseAugmentation , CustomAugmentation
+    transform_module = getattr(import_module("dataset"), cfg.augmentation)  # default: BaseAugmentation , CustomAugmentation
     transform = transform_module(
-        resize=args.resize,
+        resize=cfg.resize,
+        cropsize = cfg.cropsize,
         mean=dataset.mean,
         std=dataset.std,
     )
@@ -123,18 +130,29 @@ def train(data_dir, model_dir, args):
     # -- data_loader
     train_set, val_set = dataset.split_dataset() # dataset
 
-    train_loader = DataLoader(
-        train_set,
-        batch_size=args.batch_size,
-        num_workers=multiprocessing.cpu_count() // 2,
-        shuffle=True,
-        pin_memory=use_cuda,
-        drop_last=True,
-    )
-
+    if 'triplet' in cfg.sampler :
+            train_loader = DataLoader(
+                train_set,
+                batch_size = cfg.batch_size,
+                batch_sampler = RandomIdentitySampler(dataset,cfg.batch_size,cfg.num_instance),
+                num_workers=multiprocessing.cpu_count() // 2,
+                shuffle=True,
+                pin_memory=use_cuda,
+                drop_last=True,
+            )
+    else :
+        train_loader = DataLoader(
+            train_set,
+            batch_size=cfg.batch_size,
+            num_workers=multiprocessing.cpu_count() // 2,
+            shuffle=True,
+            pin_memory=use_cuda,
+            drop_last=True,
+        )
+    
     val_loader = DataLoader(
         val_set,
-        batch_size=args.valid_batch_size,
+        batch_size=cfg.valid_batch_size,
         num_workers=multiprocessing.cpu_count() // 2,
         shuffle=False,
         pin_memory=use_cuda,
@@ -142,29 +160,40 @@ def train(data_dir, model_dir, args):
     )
 
     # -- model
-    model_module = getattr(import_module("model"), args.model)  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
+    model_module = getattr(import_module("model"), cfg.model)  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
     model = model_module(
         num_classes=num_classes
     ).to(device)
     model = torch.nn.DataParallel(model)
 
     # -- loss & metric
-    criterion = create_criterion(args.criterion)  # default: cross_entropy
-    opt_module = getattr(import_module("torch.optim"), args.optimizer)  # SGD , Adam
+    loss_func, center_criterion = make_loss(cfg,num_classes = num_classes)
+    # criterion = create_criterion(cfg.criterion)  # default: cross_entropy
+    opt_module = getattr(import_module("torch.optim"), cfg.optimizer)  # SGD , Adam
 
     optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.lr,
+        lr=cfg.lr,
         weight_decay=5e-4
     )
-    scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    
+    scheduler = StepLRScheduler(
+            optimizer,
+            decay_t=cfg.lr_decay_step,
+            decay_rate=0.5,
+            warmup_lr_init=2e-08,
+            warmup_t=5,
+            t_in_epochs=False,
+        )
+
+    # scheduler = StepLR(optimizer, cfg.lr_decay_step, gamma=0.5)
 
     # -- Tensorboard logging
     # logger = SummaryWriter(log_dir=save_dir)
 
     best_val_acc = 0
     best_val_loss = np.inf
-    for epoch in range(args.epochs):
+    for epoch in range(cfg.epochs):
         # train loop
         model.train()
         loss_value = 0
@@ -176,21 +205,21 @@ def train(data_dir, model_dir, args):
 
             optimizer.zero_grad()
 
-            outs = model(inputs)
-            preds = torch.argmax(outs, dim=-1)
-            loss = criterion(outs, labels)
-
+            feat, score = model(inputs)
+            preds = torch.argmax(score, dim=-1)
+            #loss = criterion(outs, labels)
+            loss = loss_func(score, feat, labels)
             loss.backward()
             optimizer.step()
 
             loss_value += loss.item()
             matches += (preds == labels).sum().item()
-            if (idx + 1) % args.log_interval == 0:
-                train_loss = loss_value / args.log_interval
-                train_acc = matches / args.batch_size / args.log_interval
+            if (idx + 1) % cfg.log_interval == 0:
+                train_loss = loss_value / cfg.log_interval
+                train_acc = matches / cfg.batch_size / cfg.log_interval
                 current_lr = get_lr(optimizer)
                 print(
-                    f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
+                    f"Epoch[{epoch}/{cfg.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
 
@@ -201,7 +230,7 @@ def train(data_dir, model_dir, args):
                 matches = 0
 
         scheduler.step()
-        if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
+        if not (epoch + 1) % cfg.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
         # val loop
             with torch.no_grad():
@@ -227,7 +256,7 @@ def train(data_dir, model_dir, args):
                         inputs_np = torch.clone(inputs).detach().cpu().permute(0, 2, 3, 1).numpy()
                         inputs_np = dataset_module.denormalize_image(inputs_np, dataset.mean, dataset.std)
                         figure = grid_image(
-                            inputs_np, labels, preds, n=16, shuffle=args.dataset != "MaskSplitByProfileDataset"
+                            inputs_np, labels, preds, n=16, shuffle=cfg.dataset != "MaskSplitByProfileDataset"
                         )
 
                 val_loss = np.sum(val_loss_items) / len(val_loader)
@@ -262,5 +291,4 @@ if __name__ == '__main__':
     data_dir = cfg.data_dir
     model_dir = cfg.model_dir
     
-
     train(data_dir, model_dir, cfg)
