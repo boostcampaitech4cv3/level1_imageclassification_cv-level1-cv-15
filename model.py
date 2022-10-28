@@ -80,3 +80,26 @@ class ResNet152(nn.Module):
         """
         x = self.model(x)
         return x
+
+class EfficientNetB0(nn.Module):
+    def __init__(self, num_classes = 18):
+        super().__init__()
+
+        """
+        1. 위와 같이 생성자의 parameter 에 num_claases 를 포함해주세요.
+        2. 나만의 모델 아키텍쳐를 디자인 해봅니다.
+        3. 모델의 output_dimension 은 num_classes 로 설정해주세요.
+        """
+        self.model = timm.create_model('efficientnet_b0',pretrained=True)
+        # self.model.fc = nn.Linear(in_features = 1000, out_features = num_classes, bias = True)
+        self.fc = nn.Linear(1000,num_classes)
+        # nn.init.xavier_uniform(self.model.fc.weight)
+        
+    def forward(self, x):
+        """
+        1. 위에서 정의한 모델 아키텍쳐를 forward propagation 을 진행해주세요
+        2. 결과로 나온 output 을 return 해주세요
+        """
+        x = self.model(x)
+        x = self.fc(x)
+        return x

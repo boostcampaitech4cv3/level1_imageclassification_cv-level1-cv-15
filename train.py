@@ -7,14 +7,15 @@ import random
 import re
 from importlib import import_module
 from pathlib import Path
-
+from adamp import AdamP
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
+from loss import FocalLoss
 
-# Tensorboard 쓸거면 주석 풀고 쓰셈
+from timm.scheduler.step_lr import StepLRScheduler
 
 # from torch.utils.tensorboard import SummaryWriter 
 
@@ -155,8 +156,17 @@ def train(data_dir, model_dir, args):
         lr=args.lr,
         weight_decay=5e-4
     )
-    scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
 
+
+    #scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    scheduler = StepLRScheduler(
+        optimizer,
+        decay_t=args.lr_decay_step,
+        decay_rate=0.5,
+        warmup_lr_init=2e-08,
+        warmup_t=5,
+        t_in_epochs=False,
+    )
     # -- Tensorboard logging
     # logger = SummaryWriter(log_dir=save_dir)
 
@@ -255,7 +265,7 @@ if __name__ == '__main__':
 
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
-    parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train (default: 10)')
     parser.add_argument('--dataset', type=str, default='MaskSplitByProfileDataset', help='dataset augmentation type (default: MaskBaseDataset)')
     parser.add_argument('--augmentation', type=str, default='BaseAugmentation', help='data augmentation type (default: BaseAugmentation)')
     parser.add_argument("--resize", nargs="+", type=list, default=[128, 96], help='resize size for image when training')
@@ -271,9 +281,9 @@ if __name__ == '__main__':
     ResNet34
     ResNet152
     '''
-    parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
+    parser.add_argument('--model', type=str, default='EfficientNetB0', help='model type (default: BaseModel)')
     
-    parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer type (default: SGD)')
+    parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer type (default: SGD)')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
     parser.add_argument('--val_ratio', type=float, default=0.2, help='ratio for validaton (default: 0.2)')
     parser.add_argument('--criterion', type=str, default='cross_entropy', help='criterion type (default: cross_entropy)')
