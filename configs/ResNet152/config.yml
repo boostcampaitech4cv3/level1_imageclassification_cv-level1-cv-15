@@ -4,8 +4,9 @@ seed : 42
 epochs : 1
 dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
 augmentation : 'BaseAugmentation'
+resize : [128,96]
 batch_size : 64
-model : "BaseModel" 
+model : "ResNet152" 
 
 # Training
 
@@ -25,5 +26,5 @@ valid_batch_size : 1000
 # Container environment
 
 data_dir : '/opt/ml/input/data/train/images'
-model_dir : './model'
+model_dir : './model/ResNet152'
 

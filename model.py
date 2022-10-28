@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 import timm
+from efficientnet_pytorch import EfficientNet
 
 class BaseModel(nn.Module):
     def __init__(self, num_classes):
@@ -71,6 +72,22 @@ class ResNet152(nn.Module):
         """
         self.model = torchvision.models.resnet152(pretrained=True)
         self.model.fc = nn.Linear(in_features = 2048, out_features = num_classes, bias = True)
+        nn.init.xavier_uniform(self.model.fc.weight)
+        
+    def forward(self, x):
+        """
+        1. 위에서 정의한 모델 아키텍쳐를 forward propagation 을 진행해주세요
+        2. 결과로 나온 output 을 return 해주세요
+        """
+        x = self.model(x)
+        return x
+
+class EfficientNet_b7(nn.Module):
+    def __init__(self, num_classes = 18):
+        super().__init__()
+        
+        self.model = EfficientNet.from_pretrained('efficientnet-b7',num_classes=18)
+        self.model.fc = nn.Linear(in_features = 2560, out_features = num_classes, bias = True)
         nn.init.xavier_uniform(self.model.fc.weight)
         
     def forward(self, x):

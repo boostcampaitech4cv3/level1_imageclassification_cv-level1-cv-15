@@ -20,8 +20,8 @@ import yaml
 # from torch.utils.tensorboard import SummaryWriter 
 
 from dataset import MaskBaseDataset   # dataset class import
-from loss import create_criterion
-from model import BaseModel, ResNet34, ResNet152  # model.py에서 model class import
+from loss.softmax_loss import create_criterion
+from model import BaseModel, ResNet34, ResNet152, EfficientNet_b7  # model.py에서 model class import
 
 def seed_everything(seed):
     torch.manual_seed(seed)
@@ -112,7 +112,7 @@ def train(data_dir, model_dir, args):
     num_classes = dataset.num_classes  # 18
 
     # -- augmentation
-    transform_module = getattr(import_module("dataset"), args.augmentation)  # default: BaseAugmentation
+    transform_module = getattr(import_module("dataset"), args.augmentation)  # default: BaseAugmentation , CustomAugmentation
     transform = transform_module(
         resize=args.resize,
         mean=dataset.mean,
@@ -142,7 +142,7 @@ def train(data_dir, model_dir, args):
     )
 
     # -- model
-    model_module = getattr(import_module("model"), args.model)  # default: BaseModel
+    model_module = getattr(import_module("model"), args.model)  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
     model = model_module(
         num_classes=num_classes
     ).to(device)
@@ -150,7 +150,8 @@ def train(data_dir, model_dir, args):
 
     # -- loss & metric
     criterion = create_criterion(args.criterion)  # default: cross_entropy
-    opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
+    opt_module = getattr(import_module("torch.optim"), args.optimizer)  # SGD , Adam
+
     optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.lr,
@@ -160,7 +161,6 @@ def train(data_dir, model_dir, args):
 
     # -- Tensorboard logging
     # logger = SummaryWriter(log_dir=save_dir)
-
 
     best_val_acc = 0
     best_val_loss = np.inf
@@ -197,7 +197,6 @@ def train(data_dir, model_dir, args):
                 # Tensorboard
                 # logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
                 # logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
-
                 loss_value = 0
                 matches = 0
 
@@ -248,7 +247,6 @@ def train(data_dir, model_dir, args):
                 # logger.add_scalar("Val/loss", val_loss, epoch)
                 # logger.add_scalar("Val/accuracy", val_acc, epoch)
                 # logger.add_figure("results", figure, epoch)
-                print()
 
 
 if __name__ == '__main__':
@@ -263,5 +261,6 @@ if __name__ == '__main__':
 
     data_dir = cfg.data_dir
     model_dir = cfg.model_dir
+    
 
     train(data_dir, model_dir, cfg)

@@ -57,7 +57,7 @@ class CustomAugmentation:
             ColorJitter(0.1, 0.1, 0.1, 0.1),
             ToTensor(),
             Normalize(mean=mean, std=std),
-            AddGaussianNoise()
+            # AddGaussianNoise()
         ])
 
     def __call__(self, image):
@@ -246,38 +246,41 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
     """
 
     def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246), val_ratio=0.2):
-        self.indices = defaultdict(list)
-        super().__init__(data_dir, mean, std, val_ratio)
+        self.indices = defaultdict(list) 
+        super().__init__(data_dir, mean, std, val_ratio) ## 중요
+        # Maskdataset의 __init__ 수행, 
+        # Method인 setup, calc_statistics를 수행 (MaskSplitByProfileDataset의 method)
 
     @staticmethod
-    def _split_profile(profiles, val_ratio):
-        length = len(profiles)
-        n_val = int(length * val_ratio)
+    def _split_profile(profiles, val_ratio): 
+        length = len(profiles) # 2700
+        n_val = int(length * val_ratio) # 540
 
-        val_indices = set(random.choices(range(length), k=n_val))
-        train_indices = set(range(length)) - val_indices
+        val_indices = set(random.choices(range(length), k=n_val)) # random으로 validation set index 선발
+        train_indices = set(range(length)) - val_indices # 전체에서 validation을 뺀 나머지
         return {
             "train": train_indices,
             "val": val_indices
         }
 
     def setup(self):
-        profiles = os.listdir(self.data_dir)
-        profiles = [profile for profile in profiles if not profile.startswith(".")]
+        # super().__init__을 통해 self.data_dir, self.std, self.mean, self.val_ratio...
+        profiles = os.listdir(self.data_dir) # len(profiles) = 5400 , Ex: profiles[0] = '000695_female_Asian_53', 각각이 한 ID를 담은 폴더
+        profiles = [profile for profile in profiles if not profile.startswith(".")] # "." 로 시작하는 파일은 무시합니다
         split_profiles = self._split_profile(profiles, self.val_ratio)
-
+        # split_profiles[train] = train set, split_profiles[val] = val set
         cnt = 0
-        for phase, indices in split_profiles.items():
-            for _idx in indices:
+        for phase, indices in split_profiles.items(): # phase : train, val , indices : sample index list
+            for _idx in indices: # 각 index에 대해
                 profile = profiles[_idx]
                 img_folder = os.path.join(self.data_dir, profile)
-                for file_name in os.listdir(img_folder):
+                for file_name in os.listdir(img_folder): # train 으로 분류된 ID의 각 폴더에 담긴 image들에 대해!
                     _file_name, ext = os.path.splitext(file_name)
-                    if _file_name not in self._file_names:  # "." 로 시작하는 파일 및 invalid 한 파일들은 무시합니다
+                    if _file_name not in self._file_names:  # "." 로 시작하는 파일 및 invalid 한 파일들은 무시
                         continue
-
+                    # self.data_dir : /opt/ml/input/data/train/images,  profile : 000695_female_Asian_53 , file_name : mask5.jpg
                     img_path = os.path.join(self.data_dir, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
-                    mask_label = self._file_names[_file_name]
+                    mask_label = self._file_names[_file_name] # MaskDataset의 _file_names
 
                     id, gender, race, age = profile.split("_")
                     gender_label = GenderLabels.from_str(gender)
@@ -286,15 +289,13 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     self.image_paths.append(img_path)
                     self.mask_labels.append(mask_label)
                     self.gender_labels.append(gender_label)
-                    self.age_labels.append(age_label)
+                    self.age_labels.append(age_label) # 각 이미지에 대해 path, mask_label, gender_label, age_label을 순서대로 list에 stack
 
                     self.indices[phase].append(cnt)
                     cnt += 1
 
     def split_dataset(self) -> List[Subset]:
-        train_set = Subset(self,self.indices['train'])
-        val_set = Subset(self,self.indices['val'])
-        return train_set, val_set
+        return [Subset(self, indices) for phase, indices in self.indices.items()]
 
 
 class TestDataset(Dataset):

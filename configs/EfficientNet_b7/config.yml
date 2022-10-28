@@ -1,0 +1,34 @@
+# Model Hyperparams
+
+seed : 42
+epochs : 10
+dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
+augmentation : 'CustomAugmentation'
+resize : [256,192]
+batch_size : 16
+model : "EfficientNet_b7" 
+
+# Training
+
+optimizer : 'Adam'
+lr : 0.00002
+val_ratio : 0.2
+criterion : 'cross_entropy'
+lr_decay_step : 20
+log_interval : 20
+name : 'exp'
+
+# Validation
+
+validation_interval : 1
+valid_batch_size : 64
+
+# Test
+test_data_dir : '/opt/ml/input/data/eval'
+test_batch_size : 64
+test_model : 'exp16'
+# Container environment
+
+data_dir : '/opt/ml/input/data/train/images'
+model_dir : './model/EfficientNet_b7'
+output_dir : './output'
