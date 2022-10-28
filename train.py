@@ -15,12 +15,14 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from loss import FocalLoss
 
+from mixup import mixup,mixed_criterion
 from timm.scheduler.step_lr import StepLRScheduler
+from sklearn.metrics import f1_score
 
 # from torch.utils.tensorboard import SummaryWriter 
 
 from dataset import MaskBaseDataset   # dataset class import
-from loss import create_criterion
+from loss import create_criterion,F1Loss
 from model import BaseModel, ResNet34, ResNet152  # model.py에서 model class import
 
 def seed_everything(seed):
@@ -150,8 +152,8 @@ def train(data_dir, model_dir, args):
 
     # -- loss & metric
     #criterion = create_criterion(args.criterion)  # default: cross_entropy
+    #criterion=FocalLoss(gamma=2)
     criterion=FocalLoss(gamma=2)
-    
     opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
     optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -176,6 +178,7 @@ def train(data_dir, model_dir, args):
 
     best_val_acc = 0
     best_val_loss = np.inf
+
     for epoch in range(args.epochs):
         # train loop
         model.train()
@@ -187,22 +190,26 @@ def train(data_dir, model_dir, args):
             labels = labels.to(device)
 
             optimizer.zero_grad()
+            
+            #v=random.randint(1,2)
+            '''
+            if v==1:
+                lam=np.random.beta(0.2,0.2)
+                inputs,y_a,y_b=mixup(inputs,labels,lam)
+                outs = model(inputs)          
+            #loss = criterion(outs, labels)
+                loss=mixed_criterion(criterion,outs,y_a,y_b,lam)
+            else:
+                outs=model(inputs)
+                loss=criterion(outs,labels)
+            '''
+            outs=model(inputs)
+            loss=criterion(outs,labels)
 
-
-            outs = model(inputs)          
-            loss = criterion(outs, labels)
-            preds = torch.argmax(outs, dim=-1)
             loss.backward()
             optimizer.step()
 
-
-            outs = model(inputs)
             preds = torch.argmax(outs, dim=-1)
-            loss = criterion(outs, labels)
-
-            loss.backward()
-            optimizer.step()
-
 
             loss_value += loss.item()
             matches += (preds == labels).sum().item()
@@ -226,6 +233,18 @@ def train(data_dir, model_dir, args):
 
         #if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         # val loop
+        mask_total=[0,0,0]
+        mask_correct=[0,0,0]
+
+        gender_total=[0,0,0]
+        gender_correct=[0,0,0]
+
+        age_total=[0,0,0]
+        age_correct=[0,0,0]
+
+        target_list=[]
+        pred_list=[]
+
         with torch.no_grad():
 
                 print("Calculating validation results...")
@@ -233,18 +252,56 @@ def train(data_dir, model_dir, args):
                 val_loss_items = []
                 val_acc_items = []
                 figure = None
+
                 for val_batch in val_loader:
                     inputs, labels = val_batch
                     inputs = inputs.to(device)
                     labels = labels.to(device)
 
+                    for la in labels:
+                        la=la.item()
+                        mask_total[la//6]+=1
+                        if la%2==0:
+                            gender_total[0]+=1
+                        else:
+                            gender_total[1]+=1
+                        if la%3==0:
+                            age_total[0]+=1
+                        elif la%3==1:
+                            age_total[1]+=1
+                        else:
+                            age_total[2]+=1
+                
+
                     outs = model(inputs)
                     preds = torch.argmax(outs, dim=-1)
+
+                    pred_list.extend(preds.cpu().detach().numpy())
+                    target_list.extend(labels.cpu().detach().numpy())
 
                     loss_item = criterion(outs, labels).item()
                     acc_item = (labels == preds).sum().item()
                     val_loss_items.append(loss_item)
                     val_acc_items.append(acc_item)
+                    
+                    val_f1=f1_score(np.array(target_list),np.array(pred_list),average='macro')
+
+                    for (la,pr) in zip(labels,preds):
+                        la=la.item()
+                        pr=pr.item()
+                        if la//6==pr//6:
+                            mask_correct[la//6]+=1
+                        
+                        if la%2==pr%2:
+                            gender_correct[la%2]+=1
+                        
+                        if la%3==pr%3:
+                            age_correct[la%3]+=1
+
+                        if la%3==2:
+                            print(pr%3,end=' ')
+
+
 
                     if figure is None:
                         inputs_np = torch.clone(inputs).detach().cpu().permute(0, 2, 3, 1).numpy()
@@ -252,6 +309,16 @@ def train(data_dir, model_dir, args):
                         figure = grid_image(
                             inputs_np, labels, preds, n=16, shuffle=args.dataset != "MaskSplitByProfileDataset"
                         )
+                print(f'age<30:{age_correct[0]/age_total[0]:4.2%}')
+                print(f'30<=age<60:{age_correct[1]/age_total[1]:4.2%}')
+                print(f'age>=60:{age_correct[2]/age_total[2]:4.2%}')
+
+                print(f'mask_wear:{mask_correct[0]/mask_correct[0]:4.2%}')
+                print(f'mask_incorrect{mask_correct[1]/mask_correct[1]:4.2%}')
+                print(f'mask_wrong{mask_correct[2]/mask_correct[2]:4.2%}')
+
+                print(f'male:{gender_correct[0]/gender_total[0]:4.2%}')
+                print(f'female{gender_correct[1]/gender_total[1]:4.2%}')
 
                 val_loss = np.sum(val_loss_items) / len(val_loader)
                 val_acc = np.sum(val_acc_items) / len(val_set)
@@ -264,8 +331,11 @@ def train(data_dir, model_dir, args):
                 torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
                 print(
                     f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
-                    f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
-                )
+                    f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} ||"
+                    f"f1_score: {val_f1:4.2%}"
+                )            
+
+
                 # Tensorboard
                 # logger.add_scalar("Val/loss", val_loss, epoch)
                 # logger.add_scalar("Val/accuracy", val_acc, epoch)
@@ -283,7 +353,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default='MaskSplitByProfileDataset', help='dataset augmentation type (default: MaskBaseDataset)')
     parser.add_argument('--augmentation', type=str, default='CustomAugmentation', help='data augmentation type (default: BaseAugmentation)')
     parser.add_argument("--resize", nargs="+", type=list, default=[240, 240], help='resize size for image when training')
-    parser.add_argument('--batch_size', type=int, default=32, help='input batch size for training (default: 64)')
+    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
 
     
     # Validation

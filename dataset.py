@@ -10,6 +10,11 @@ from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import *
 import pandas as pd
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
+import cv2
+
+from sklearn.model_selection import StratifiedKFold
 
 IMG_EXTENSIONS = [
     ".jpg", ".JPG", ".jpeg", ".JPEG", ".png",
@@ -52,18 +57,45 @@ class AddGaussianNoise(object):
 
 class CustomAugmentation:
     def __init__(self, resize, mean, std, **args):
-        self.transform = transforms.Compose([
-            CenterCrop((320, 256)),
-            Resize(resize, Image.BILINEAR),
-            ColorJitter(0.1, 0.1, 0.1, 0.1),
-            # ImageNetPolicy(),
-            ToTensor(),
-            Normalize(mean=mean, std=std),
-            # AddGaussianNoise()
+        self.transform = A.Compose([
+            A.HorizontalFlip(),
+            A.CenterCrop(320, 256),
+            A.Resize(224,224),
+            A.ColorJitter(0.1, 0.1, 0.1, 0.1),
+            #A.CLAHE(always_apply=False, p=0.5, clip_limit=(1, 15), tile_grid_size=(8, 8)),
+            A.Equalize(always_apply=False, p=0.5, mode='cv', by_channels=False),
+            A.CoarseDropout(always_apply=False, p=0.5),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2(),
         ])
 
     def __call__(self, image):
-        return self.transform(image)
+        return self.transform(image=image)['image']
+
+class fold_mask(Dataset):
+    num_classes=18
+    def __init__(self,img_paths,labels,mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246),transforms=None):
+        self.img_paths=img_paths
+        self.labels=labels
+        self.transforms=transforms
+        self.mean=mean
+        self.std=std
+
+    def set_transform(self, transform):
+        self.transforms = transform
+        
+    def __getitem__(self,index):
+        img_path=self.img_paths[index]
+        image=cv2.imread(img_path)
+        image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+
+        if self.transforms is not None:
+            image=self.transforms(image)
+        label=self.labels[index]
+        return image,label
+
+    def __len__(self):
+        return len(self.img_paths)
 
 
 class MaskLabels(int, Enum):
@@ -201,7 +233,10 @@ class MaskBaseDataset(Dataset):
 
     def read_image(self, index):
         image_path = self.image_paths[index]
-        return Image.open(image_path)
+        image=cv2.imread(image_path)
+        image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+
+        return image
 
     @staticmethod
     def encode_multi_class(mask_label, gender_label, age_label) -> int:
@@ -332,10 +367,16 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
 
                     self.indices[phase].append(cnt)
                     cnt += 1
-
+    
     def split_dataset(self) -> List[Subset]:
         return [Subset(self, indices) for phase, indices in self.indices.items()]
 
+    
+        
+        
+        
+
+    
 
 class TestDataset(Dataset):
     def __init__(self, img_paths, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
