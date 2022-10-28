@@ -82,7 +82,14 @@ def train(data_dir, model_dir, args):
             mean=train_set.mean,
             std=train_set.std,
         )
+        test_transform_modele=getattr(import_module('dataset'),'CustomTestAugmentation')
+        test_transform = transform_module(
+            resize=args.resize,
+            mean=train_set.mean,
+            std=train_set.std,
+        )
         train_set.set_transform(transform)
+        val_set.set_transform(test_transform)
         train_loader = DataLoader(
             train_set,
             batch_size=args.batch_size,

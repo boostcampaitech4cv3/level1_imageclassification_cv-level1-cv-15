@@ -72,6 +72,20 @@ class CustomAugmentation:
     def __call__(self, image):
         return self.transform(image=image)['image']
 
+class CustomTestAugmentation:
+    def __init__(self, resize, mean, std, **args):
+        self.transform = A.Compose([
+            A.CenterCrop(320, 256),
+            A.Resize(224,224),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2(),
+        ])
+
+    def __call__(self, image):
+        return self.transform(image=image)['image']
+
+
+
 class fold_mask(Dataset):
     num_classes=18
     def __init__(self,img_paths,labels,mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246),transforms=None):
