@@ -16,11 +16,11 @@ from torch.utils.data import DataLoader
 from config import cfg
 import yaml
 from loss import make_loss
-from .sampler import RandomIdentitySampler
+from dataloader import make_dataloader
 
 # from torch.cuda import amp
 
-# Tensorboard 쓸거면 주석 풀고 쓰셈
+# Tensorboard 쓸거면 주석 P풀고 쓰셈
 
 # from torch.utils.tensorboard import SummaryWriter 
 
@@ -109,55 +109,44 @@ def train(data_dir, model_dir, cfg):
     # -- settings
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
-
+    train_loader, val_loader, num_classes = make_dataloader(data_dir,cfg)
     # -- dataset
-    dataset_module = getattr(import_module("dataset"), cfg.dataset)  # default: MaskBaseDataset
-    dataset = dataset_module(
-        data_dir=data_dir,
-    )
-    num_classes = dataset.num_classes  # 18
+    # dataset_module = getattr(import_module("dataset"), cfg.dataset)  # default: MaskBaseDataset
+    # dataset = dataset_module(
+    #     data_dir=data_dir,
+    # )
+    # num_classes = dataset.num_classes  # 18
 
-    # -- augmentation
-    transform_module = getattr(import_module("dataset"), cfg.augmentation)  # default: BaseAugmentation , CustomAugmentation
-    transform = transform_module(
-        resize=cfg.resize,
-        cropsize = cfg.cropsize,
-        mean=dataset.mean,
-        std=dataset.std,
-    )
-    dataset.set_transform(transform)
+    # # -- augmentation
+    # transform_module = getattr(import_module("dataset"), cfg.augmentation)  # default: BaseAugmentation , CustomAugmentation
+    # transform = transform_module(
+    #     resize=cfg.resize,
+    #     cropsize = cfg.cropsize,
+    #     mean=dataset.mean,
+    #     std=dataset.std,
+    # )
+    # dataset.set_transform(transform)
 
-    # -- data_loader
-    train_set, val_set = dataset.split_dataset() # dataset
+    # # -- data_loader
+    # train_set, val_set = dataset.split_dataset() # dataset
 
-    if 'triplet' in cfg.sampler :
-            train_loader = DataLoader(
-                train_set,
-                batch_size = cfg.batch_size,
-                batch_sampler = RandomIdentitySampler(dataset,cfg.batch_size,cfg.num_instance),
-                num_workers=multiprocessing.cpu_count() // 2,
-                shuffle=True,
-                pin_memory=use_cuda,
-                drop_last=True,
-            )
-    else :
-        train_loader = DataLoader(
-            train_set,
-            batch_size=cfg.batch_size,
-            num_workers=multiprocessing.cpu_count() // 2,
-            shuffle=True,
-            pin_memory=use_cuda,
-            drop_last=True,
-        )
-    
-    val_loader = DataLoader(
-        val_set,
-        batch_size=cfg.valid_batch_size,
-        num_workers=multiprocessing.cpu_count() // 2,
-        shuffle=False,
-        pin_memory=use_cuda,
-        drop_last=True,
-    )
+    # train_loader = DataLoader(
+    #     train_set,
+    #     batch_size=cfg.batch_size,
+    #     num_workers=multiprocessing.cpu_count() // 2,
+    #     shuffle=True,
+    #     pin_memory=use_cuda,
+    #     drop_last=True,
+    # )
+
+    # val_loader = DataLoader(
+    #     val_set,
+    #     batch_size=cfg.valid_batch_size,
+    #     num_workers=multiprocessing.cpu_count() // 2,
+    #     shuffle=False,
+    #     pin_memory=use_cuda,
+    #     drop_last=True,
+    # )
 
     # -- model
     model_module = getattr(import_module("model"), cfg.model)  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
@@ -229,7 +218,7 @@ def train(data_dir, model_dir, cfg):
                 loss_value = 0
                 matches = 0
 
-        scheduler.step()
+        scheduler.step_update(epoch+1)
         if not (epoch + 1) % cfg.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
         # val loop

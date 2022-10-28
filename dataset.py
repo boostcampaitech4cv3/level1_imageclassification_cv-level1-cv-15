@@ -122,7 +122,8 @@ class MaskBaseDataset(Dataset):
     mask_labels = []
     gender_labels = []
     age_labels = [] 
-
+    train_image_with_ID = []
+    val_image_with_ID = []
     def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246), val_ratio=0.2):
         self.data_dir = data_dir
         self.mean = mean
@@ -182,7 +183,7 @@ class MaskBaseDataset(Dataset):
         mask_label = self.get_mask_label(index)
         gender_label = self.get_gender_label(index)
         age_label = self.get_age_label(index)
-        multi_class_label = self.encode_multi_class(mask_label, gender_label, age_label)
+        multi_class_label = self.encode_multi_class(mask_label, gender_label, age_label) # class index 계산하는 부분
 
         image_transform = self.transform(image)
         return image_transform, multi_class_label
@@ -191,7 +192,7 @@ class MaskBaseDataset(Dataset):
         return len(self.image_paths)
 
     def get_mask_label(self, index) -> MaskLabels:
-        return self.mask_labels[index]
+        return self.mask_labels[index] #각 label
 
     def get_gender_label(self, index) -> GenderLabels:
         return self.gender_labels[index]
@@ -250,7 +251,7 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
         super().__init__(data_dir, mean, std, val_ratio) ## 중요
         # Maskdataset의 __init__ 수행, 
         # Method인 setup, calc_statistics를 수행 (MaskSplitByProfileDataset의 method)
-
+        
     @staticmethod
     def _split_profile(profiles, val_ratio): 
         length = len(profiles) # 2700
@@ -290,13 +291,16 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     self.mask_labels.append(mask_label)
                     self.gender_labels.append(gender_label)
                     self.age_labels.append(age_label) # 각 이미지에 대해 path, mask_label, gender_label, age_label을 순서대로 list에 stack
-
+                    
+                    if phase == 'train':
+                        self.train_image_with_ID.append((img_path,mask_label * 6 + gender_label * 3 + age_label))
+                    else:
+                        self.val_image_with_ID.append((img_path,mask_label * 6 + gender_label * 3 + age_label))
                     self.indices[phase].append(cnt)
                     cnt += 1
 
     def split_dataset(self) -> List[Subset]:
         return [Subset(self, indices) for phase, indices in self.indices.items()]
-
 
 class TestDataset(Dataset):
     def __init__(self, img_paths, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
@@ -316,3 +320,17 @@ class TestDataset(Dataset):
 
     def __len__(self):
         return len(self.img_paths)
+
+class ImageDataset(Dataset): # ImageDataset class : DataLoader에 들어갈 instance 생성자 __len__, _getitem__ method 
+    def __init__(self, dataset, transform=None):
+        self.dataset = dataset # dataset list 
+        self.transform = transform # transform list
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img_path, pid = self.dataset[index]
+        img = Image.open(img_path)
+        if self.transform is not None:
+             img = self.transform(img)
+        return img, pid
