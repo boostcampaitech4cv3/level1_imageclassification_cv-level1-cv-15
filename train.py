@@ -210,8 +210,8 @@ def train(data_dir, model_dir, args):
                 loss_value = 0
                 matches = 0
 
-        scheduler.step()
-        if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
+        scheduler.step_update(epoch + 1)
+        if (epoch + 1) % args.validation_interval: # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
         # val loop
             with torch.no_grad():
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
     
     # Validation
-    parser.add_argument('--validation_interval',type=int,default=10, help="Validation interval in training process (default: 10)")
+    parser.add_argument('--validation_interval',type=int,default=2, help="Validation interval in training process (default: 10)")
     parser.add_argument('--valid_batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
     
     '''
