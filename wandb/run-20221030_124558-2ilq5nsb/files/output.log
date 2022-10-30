@@ -219,3 +219,41 @@ Epoch[11/100](120/481) || training loss 0.594 || training accuracy 72.19% || lr 
 Epoch[11/100](140/481) || training loss 0.5881 || training accuracy 77.66% || lr 3.881998014832635e-05
 Epoch[11/100](160/481) || training loss 0.5076 || training accuracy 81.88% || lr 3.881998014832635e-05
 Epoch[11/100](180/481) || training loss 0.4755 || training accuracy 83.59% || lr 3.881998014832635e-05
+Epoch[11/100](200/481) || training loss 0.375 || training accuracy 90.47% || lr 3.881998014832635e-05
+Epoch[11/100](220/481) || training loss 0.338 || training accuracy 90.47% || lr 3.881998014832635e-05
+Epoch[11/100](240/481) || training loss 0.3458 || training accuracy 92.19% || lr 3.881998014832635e-05
+Epoch[11/100](260/481) || training loss 0.2124 || training accuracy 97.66% || lr 3.881998014832635e-05
+Epoch[11/100](280/481) || training loss 0.2041 || training accuracy 98.44% || lr 3.881998014832635e-05
+Epoch[11/100](300/481) || training loss 0.2485 || training accuracy 98.12% || lr 3.881998014832635e-05
+Epoch[11/100](320/481) || training loss 0.2166 || training accuracy 98.91% || lr 3.881998014832635e-05
+Epoch[11/100](340/481) || training loss 0.1601 || training accuracy 98.44% || lr 3.881998014832635e-05
+Epoch[11/100](360/481) || training loss 0.1613 || training accuracy 98.59% || lr 3.881998014832635e-05
+Calculating validation results...
+New best model for val accuracy in epoch 11: 81.56%! saving the best model..
+[Val] acc : 81.56%, loss: 0.65 || best acc : 81.56%, best loss: 0.65
+Epoch[12/100](20/481) || training loss 1.019 || training accuracy 49.84% || lr 3.85983386583295e-05
+Epoch[12/100](40/481) || training loss 0.9399 || training accuracy 49.38% || lr 3.85983386583295e-05
+Epoch[12/100](60/481) || training loss 0.6723 || training accuracy 64.69% || lr 3.85983386583295e-05
+Epoch[12/100](80/481) || training loss 0.594 || training accuracy 73.12% || lr 3.85983386583295e-05
+Epoch[12/100](100/481) || training loss 0.631 || training accuracy 68.91% || lr 3.85983386583295e-05
+Epoch[12/100](120/481) || training loss 0.5178 || training accuracy 72.50% || lr 3.85983386583295e-05
+Epoch[12/100](140/481) || training loss 0.5404 || training accuracy 76.72% || lr 3.85983386583295e-05
+Epoch[12/100](160/481) || training loss 0.4963 || training accuracy 84.22% || lr 3.85983386583295e-05
+Epoch[12/100](180/481) || training loss 0.4491 || training accuracy 85.47% || lr 3.85983386583295e-05
+Epoch[12/100](200/481) || training loss 0.3089 || training accuracy 91.72% || lr 3.85983386583295e-05
+Epoch[12/100](220/481) || training loss 0.3416 || training accuracy 90.00% || lr 3.85983386583295e-05
+Epoch[12/100](240/481) || training loss 0.3036 || training accuracy 92.34% || lr 3.85983386583295e-05
+Epoch[12/100](260/481) || training loss 0.1838 || training accuracy 98.59% || lr 3.85983386583295e-05
+Epoch[12/100](280/481) || training loss 0.1753 || training accuracy 98.91% || lr 3.85983386583295e-05
+Epoch[12/100](300/481) || training loss 0.1154 || training accuracy 99.69% || lr 3.85983386583295e-05
+Epoch[12/100](320/481) || training loss 0.1309 || training accuracy 98.91% || lr 3.85983386583295e-05
+Epoch[12/100](340/481) || training loss 0.09403 || training accuracy 98.91% || lr 3.85983386583295e-05
+Epoch[12/100](360/481) || training loss 0.111 || training accuracy 99.22% || lr 3.85983386583295e-05
+Calculating validation results...
+[Val] acc : 81.50%, loss: 0.64 || best acc : 81.56%, best loss: 0.64
+Epoch[13/100](20/481) || training loss 0.8622 || training accuracy 48.91% || lr 3.8358382328652266e-05
+Epoch[13/100](40/481) || training loss 0.8265 || training accuracy 57.81% || lr 3.8358382328652266e-05
+Epoch[13/100](60/481) || training loss 0.6019 || training accuracy 64.53% || lr 3.8358382328652266e-05
+Epoch[13/100](80/481) || training loss 0.5348 || training accuracy 74.06% || lr 3.8358382328652266e-05
+Epoch[13/100](100/481) || training loss 0.4298 || training accuracy 74.53% || lr 3.8358382328652266e-05
+Epoch[13/100](120/481) || training loss 0.4736 || training accuracy 81.41% || lr 3.8358382328652266e-05

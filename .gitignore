@@ -3,3 +3,4 @@ model_output
 .vscode
 .empty
 __pycache__
+wandb

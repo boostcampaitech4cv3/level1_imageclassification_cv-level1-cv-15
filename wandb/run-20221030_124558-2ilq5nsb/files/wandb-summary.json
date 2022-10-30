@@ -1,1 +1,1 @@
-{"Train Epoch": 11, "Train Loss": 0.33802720829844474, "Learning rate": 3.881998014832635e-05, "Train Acc": 0.9046875, "_timestamp": 1667134562.968155, "_runtime": 604.2818419933319, "_step": 199, "Val Epoch": 10, "Val oss": 0.6818870348188112, "Val Acc": 0.8044496487119438}
+{"Train Epoch": 13, "Train Loss": 0.41786152571439744, "Learning rate": 3.8358382328652266e-05, "Train Acc": 0.825, "_timestamp": 1667134667.879725, "_runtime": 709.193412065506, "_step": 234, "Val Epoch": 12, "Val oss": 0.64135768081782, "Val Acc": 0.8149882903981265}
