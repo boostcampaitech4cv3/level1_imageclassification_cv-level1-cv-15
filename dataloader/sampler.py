@@ -58,7 +58,7 @@ class RandomIdentitySampler(Sampler):  # For Single GPU training
         while len(avai_pids) >= self.num_pids_per_batch: # self.num_instances = 4, self.num_pids_per_batch = 16
             selected_pids = random.sample(avai_pids, self.num_pids_per_batch)
             cnt +=1
-            print(selected_pids,cnt)
+            # print(f"{cnt}th ID batch : {selected_pids}")
             for pid in selected_pids: # selected_pids : random으로 뽑힌 self.num_pids_per_batch만큼의 pid
                 batch_idxs = batch_idxs_dict[pid].pop(0) # self.num_instances개씩 뽑아놓은 batch들중 맨 앞을 pop
                 final_idxs.extend(batch_idxs) # final_idxs에 batch_idxs elements들을 추가

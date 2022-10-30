@@ -76,10 +76,14 @@ _C.validation_interval = 10
 _C.valid_batch_size = 64
 
 # Test 
+
 _C.test_data_dir = "/opt/ml/input/eval"
 _C.test_batch_size = 1000
 _C.test_model = 'exp'
 
+# WANDB
+
+_C.wandb = False
 # Container enviornment
 
 _C.data_dir = "/opt/ml/input/data/train/images"

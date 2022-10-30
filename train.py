@@ -7,6 +7,7 @@ import random
 import re
 from importlib import import_module
 from pathlib import Path
+import wandb
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,10 +20,6 @@ from loss import make_loss
 from dataloader import make_dataloader
 
 # from torch.cuda import amp
-
-# Tensorboard 쓸거면 주석 P풀고 쓰셈
-
-# from torch.utils.tensorboard import SummaryWriter 
 
 from dataset import MaskBaseDataset   # dataset class import
 from loss.softmax_loss import create_criterion
@@ -121,39 +118,6 @@ def train(data_dir, model_dir, cfg):
 
     train_loader, val_loader, train_set, val_set, num_classes = make_dataloader(dataset,cfg)
 
-    # num_classes = dataset.num_classes  # 18
-
-    # # -- augmentation
-    # transform_module = getattr(import_module("dataset"), cfg.augmentation)  # default: BaseAugmentation , CustomAugmentation
-    # transform = transform_module(
-    #     resize=cfg.resize,
-    #     cropsize = cfg.cropsize,
-    #     mean=dataset.mean,
-    #     std=dataset.std,
-    # )
-    # dataset.set_transform(transform)
-
-    # # -- data_loader
-    # train_set, val_set = dataset.split_dataset() # dataset
-
-    # train_loader = DataLoader(
-    #     train_set,
-    #     batch_size=cfg.batch_size,
-    #     num_workers=multiprocessing.cpu_count() // 2,
-    #     shuffle=True,
-    #     pin_memory=use_cuda,
-    #     drop_last=True,
-    # )
-
-    # val_loader = DataLoader(
-    #     val_set,
-    #     batch_size=cfg.valid_batch_size,
-    #     num_workers=multiprocessing.cpu_count() // 2,
-    #     shuffle=False,
-    #     pin_memory=use_cuda,
-    #     drop_last=True,
-    # )
-
     # -- model
     model_module = getattr(import_module("model"), cfg.model)  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
     model = model_module(
@@ -164,34 +128,11 @@ def train(data_dir, model_dir, cfg):
     # -- loss & metric
     loss_func, center_criterion = make_loss(cfg,num_classes = num_classes)
     
-    
     val_criterion = create_criterion("cross_entropy")  # default: cross_entropy
     
-    # opt_module = getattr(import_module("torch.optim"), cfg.optimizer)  # SGD , Adam
-
     optimizer = make_optimizer(cfg, model, center_criterion)
 
-    # optimizer = opt_module(
-    #     filter(lambda p: p.requires_grad, model.parameters()),
-    #     lr=cfg.lr,
-    #     weight_decay=5e-4
-    # )
-
     scheduler = create_scheduler(cfg,optimizer)
-
-    # scheduler = StepLRScheduler(
-    #         optimizer,
-    #         decay_t=cfg.lr_decay_step,
-    #         decay_rate=0.5,
-    #         warmup_lr_init=2e-08,
-    #         warmup_t=5,
-    #         t_in_epochs=False,
-    #     )
-
-    # scheduler = StepLR(optimizer, cfg.lr_decay_step, gamma=0.5)
-
-    # -- Tensorboard logging
-    # logger = SummaryWriter(log_dir=save_dir)
 
     best_val_acc = 0
     best_val_loss = np.inf
@@ -228,11 +169,14 @@ def train(data_dir, model_dir, cfg):
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
 
-                # Tensorboard
-                # logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
-                # logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
                 loss_value = 0
                 matches = 0
+
+                if cfg.wandb:
+                    wandb.log({ 'Train Epoch': epoch, 
+                                'Train Loss' : train_loss, 
+                                'Learning rate': scheduler._get_lr(epoch)[0],
+                                'Train Acc': train_acc})   
 
         scheduler.step_update(epoch+1)
         if not (epoch + 1) % cfg.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
@@ -277,10 +221,9 @@ def train(data_dir, model_dir, cfg):
                     f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                     f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
                 )
-                # Tensorboard
-                # logger.add_scalar("Val/loss", val_loss, epoch)
-                # logger.add_scalar("Val/accuracy", val_acc, epoch)
-                # logger.add_figure("results", figure, epoch)
+
+                if cfg.wandb : 
+                    wandb.log({'Val Epoch': epoch, 'Val oss' : val_loss, 'Val Acc' : val_acc})
 
 
 if __name__ == '__main__':
@@ -296,4 +239,7 @@ if __name__ == '__main__':
     data_dir = cfg.data_dir
     model_dir = cfg.model_dir
     
+    if cfg.wandb:
+        wandb.init(project="CV_competition", entity="panda0728",config=cfg)
+
     train(data_dir, model_dir, cfg)

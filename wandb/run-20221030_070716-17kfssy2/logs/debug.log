@@ -1,0 +1,26 @@
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_setup.py:_flush():68] Configure stats pid to 9671
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_setup.py:_flush():68] Loading settings from /opt/ml/.config/wandb/settings
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_setup.py:_flush():68] Loading settings from /opt/ml/code/level1_imageclassification_cv-level1-cv-15/wandb/settings
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_setup.py:_flush():68] Loading settings from environment variables: {'_require_service': 'True'}
+2022-10-30 07:07:16,282 WARNING MainThread:9671 [wandb_setup.py:_flush():68] Could not find program at -m train
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_setup.py:_flush():68] Inferring run settings from compute environment: {'program_relpath': None, 'program': '-m train'}
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_init.py:_log_setup():476] Logging user logs to /opt/ml/code/level1_imageclassification_cv-level1-cv-15/wandb/run-20221030_070716-17kfssy2/logs/debug.log
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_init.py:_log_setup():477] Logging internal logs to /opt/ml/code/level1_imageclassification_cv-level1-cv-15/wandb/run-20221030_070716-17kfssy2/logs/debug-internal.log
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_init.py:init():516] calling init triggers
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_init.py:init():519] wandb.init called with sweep_config: {}
+config: {'train': True, 'seed': 42, 'dataset': 'MaskSplitByProfileDataset', 'augmentation': 'CustomAugmentation', 'cropsize': [320, 256], 'resize': [240, 240], 'batch_size': 32, 'model': 'EfficientNet_b0', 'val_ratio': 0.2, 'criterion': 'cross_entropy', 'lr_decay_step': 20, 'log_interval': 20, 'name': 'exp', 'optimizer': 'SGD', 'scheduler': 'cos', 'epochs': 100, 'base_lr': 0.0004, 'bias_lr_factor': 2, 'solver_seed': 1234, 'momentum': 0.9, 'weight_decay': 0.0001, 'weight_decay_bias': 0.0001, 'gamma': 0.1, 'steps': (40, 70), 'warmup_factor': 0.01, 'warmup_epochs': 5, 'warmup_method': 'linear', 'cosine_margin': 0.5, 'cosine_scale': 30, 'sampler': 'softmax_triplet', 'num_instance': 8, 'loss_type': 'triplet', 'ID_loss_weight': 0.5, 'triplet_loss_weight': 0.5, 'label_smooth': False, 'margin': 0.3, 'feat_norm': False, 'validation_interval': 1, 'valid_batch_size': 64, 'test_data_dir': '/opt/ml/input/data/eval', 'test_batch_size': 64, 'test_model': 'exp59', 'wandb': True, 'data_dir': '/opt/ml/input/data/train/images', 'model_dir': './model_output/EfficientNet_b0', 'output_dir': './inference_output'}
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_init.py:init():569] starting backend
+2022-10-30 07:07:16,282 INFO    MainThread:9671 [wandb_init.py:init():573] setting up manager
+2022-10-30 07:07:16,286 INFO    MainThread:9671 [backend.py:_multiprocessing_setup():102] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2022-10-30 07:07:16,290 INFO    MainThread:9671 [wandb_init.py:init():580] backend started and connected
+2022-10-30 07:07:16,297 INFO    MainThread:9671 [wandb_init.py:init():658] updated telemetry
+2022-10-30 07:07:16,307 INFO    MainThread:9671 [wandb_init.py:init():693] communicating run to backend with 60 second timeout
+2022-10-30 07:07:16,797 INFO    MainThread:9671 [wandb_run.py:_on_init():2000] communicating current version
+2022-10-30 07:07:16,856 INFO    MainThread:9671 [wandb_run.py:_on_init():2004] got version response 
+2022-10-30 07:07:16,857 INFO    MainThread:9671 [wandb_init.py:init():728] starting run threads in backend
+2022-10-30 07:07:20,946 INFO    MainThread:9671 [wandb_run.py:_console_start():1980] atexit reg
+2022-10-30 07:07:20,946 INFO    MainThread:9671 [wandb_run.py:_redirect():1838] redirect: SettingsConsole.WRAP_RAW
+2022-10-30 07:07:20,947 INFO    MainThread:9671 [wandb_run.py:_redirect():1903] Wrapping output streams.
+2022-10-30 07:07:20,947 INFO    MainThread:9671 [wandb_run.py:_redirect():1925] Redirects installed.
+2022-10-30 07:07:20,955 INFO    MainThread:9671 [wandb_init.py:init():765] run started, returning control to user process
+2022-10-30 07:07:37,380 WARNING MsgRouterThr:9671 [router.py:message_loop():77] message_loop has been closed

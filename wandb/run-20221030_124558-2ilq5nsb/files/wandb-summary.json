@@ -1,0 +1,1 @@
+{"Train Epoch": 11, "Train Loss": 0.33802720829844474, "Learning rate": 3.881998014832635e-05, "Train Acc": 0.9046875, "_timestamp": 1667134562.968155, "_runtime": 604.2818419933319, "_step": 199, "Val Epoch": 10, "Val oss": 0.6818870348188112, "Val Acc": 0.8044496487119438}

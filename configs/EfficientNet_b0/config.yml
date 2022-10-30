@@ -5,7 +5,7 @@ train : True
 # Model Hyperparams
 
 seed : 42
-epochs : 10
+epochs : 100
 dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
 augmentation : 'CustomAugmentation'
 cropsize : [320,256]
@@ -15,15 +15,16 @@ model : "EfficientNet_b0"
 
 # Optimizer
 
-optimizer : 'SGD'
+optimizer : 'AdamW'
 scheduler : 'cos'
-base_lr : 0.0004
+base_lr : 0.00004
 weight_decay : 1e-4
 weight_decay_bias : 1e-4
 bias_lr_factor : 2
 warmup_epochs : 5
 warmup_factor : 0.01
 warmup_method : 'linear'
+
 # Training
 
 val_ratio : 0.2
@@ -46,13 +47,17 @@ feat_norm : False
 ID_loss_weight : 0.5
 triplet_loss_weight : 0.5
 label_smooth : False
-margin : 0.0
+margin : 0.3
 
 # Test
 
 test_data_dir : '/opt/ml/input/data/eval'
 test_batch_size : 64
-test_model : 'exp59'
+test_model : 'exp62'
+
+# WANDB
+ 
+wandb : True
 
 # Container environment
 
