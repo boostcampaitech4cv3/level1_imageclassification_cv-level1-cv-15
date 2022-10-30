@@ -13,10 +13,19 @@ resize : [240,240]
 batch_size : 32
 model : "EfficientNet_b0" 
 
+# Optimizer
+
+optimizer : 'SGD'
+scheduler : 'cos'
+base_lr : 0.0004
+weight_decay : 1e-4
+weight_decay_bias : 1e-4
+bias_lr_factor : 2
+warmup_epochs : 5
+warmup_factor : 0.01
+warmup_method : 'linear'
 # Training
 
-optimizer : 'Adam'
-lr : 0.0002
 val_ratio : 0.2
 criterion : 'cross_entropy'
 lr_decay_step : 20
@@ -43,11 +52,11 @@ margin : 0.0
 
 test_data_dir : '/opt/ml/input/data/eval'
 test_batch_size : 64
-test_model : 'exp16'
+test_model : 'exp59'
 
 # Container environment
 
 data_dir : '/opt/ml/input/data/train/images'
-model_dir : './model/EfficientNet_b0'
-output_dir : './output'
+model_dir : './model_output/EfficientNet_b0'
+output_dir : './inference_output'
 

@@ -23,6 +23,7 @@ class RandomIdentitySampler(Sampler):  # For Single GPU training
         for index, (_,pid) in enumerate(self.data_source):
             self.index_dic[pid].append(index) # pids : image index 형태의 dictionary로 저장
         
+        self.id_cnt = list(map(lambda x : len(x[1]),self.index_dic.items()))
         self.pids = list(self.index_dic.keys())  # pids list
 
         # estimate number of examples in an epoch
@@ -32,7 +33,7 @@ class RandomIdentitySampler(Sampler):  # For Single GPU training
             num = len(idxs)
             if num < self.num_instances: # 만약 해당 id의 image 개수가 num_instances보다 작으면 전부 batch에 포함
                 num = self.num_instances
-            self.length += num - num % self.num_instances  # number of examples
+            self.length += num - num % self.num_instances  # number of examples 
 
     def __iter__(self):
         batch_idxs_dict = defaultdict(list) 
@@ -51,11 +52,13 @@ class RandomIdentitySampler(Sampler):  # For Single GPU training
                     batch_idxs = [] # batch 초기화
                     # 예를 들면, 0번 pid에 대해 {0 :[[26,40,41,34],[21,6,10,44]...], }
 
-        avai_pids = copy.deepcopy(self.pids) # 751 for Market 1501
+        avai_pids = copy.deepcopy(self.pids) # pids
         final_idxs = []
-
+        cnt = 0
         while len(avai_pids) >= self.num_pids_per_batch: # self.num_instances = 4, self.num_pids_per_batch = 16
             selected_pids = random.sample(avai_pids, self.num_pids_per_batch)
+            cnt +=1
+            print(selected_pids,cnt)
             for pid in selected_pids: # selected_pids : random으로 뽑힌 self.num_pids_per_batch만큼의 pid
                 batch_idxs = batch_idxs_dict[pid].pop(0) # self.num_instances개씩 뽑아놓은 batch들중 맨 앞을 pop
                 final_idxs.extend(batch_idxs) # final_idxs에 batch_idxs elements들을 추가
@@ -65,8 +68,10 @@ class RandomIdentitySampler(Sampler):  # For Single GPU training
         # while문이 끝나고 나면?
         # len(avai_pids) == self.num_pids_per_batch
         # batch_idxs_dict : avai_pids에 남은 16개의 pid를 제외한 모든 pid key의 value가 []인 상태
-        # final_idxs 에는 random id에 대해 sample들이 4개씩 차례대로 append된 상태 
-        # iterable 객체로 반환
+        
+        # final_idxs 에는 random id에 대해 sample들이 4개씩 
+        
+    
         return iter(final_idxs)
 
     def __len__(self): 

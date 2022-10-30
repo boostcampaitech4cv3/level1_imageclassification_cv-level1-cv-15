@@ -17,13 +17,8 @@ def val_collate_fn(batch):
     return torch.stack(imgs, dim=0), pids
 
 
-def make_dataloader(data_dir,cfg):
-    
-    # -- dataset
-    dataset_module = getattr(import_module("dataset"), cfg.dataset)  # default: MaskBaseDataset
-    dataset = dataset_module(
-        data_dir=data_dir,
-    )
+def make_dataloader(dataset,cfg):
+
 
     num_classes = dataset.num_classes  # 18
 
@@ -72,4 +67,4 @@ def make_dataloader(data_dir,cfg):
         drop_last=True,
     )
     
-    return train_loader, val_loader , num_classes
+    return train_loader, val_loader, train_set, val_set, num_classes 

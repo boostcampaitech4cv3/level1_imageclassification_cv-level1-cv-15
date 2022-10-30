@@ -58,7 +58,7 @@ def inference(data_dir, model_dir, output_dir, args):
     with torch.no_grad():
         for idx, images in enumerate(tqdm(loader)):
             images = images.to(device)
-            pred = model(images)
+            pred = model(images)[1]
             pred = pred.argmax(dim=-1)
             preds.extend(pred.cpu().numpy())
 
@@ -80,8 +80,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data_dir = cfg.test_data_dir
-    model_dir = cfg.model_dir
-    output_dir = cfg.output_dir
+    model_dir = cfg.model_dir + "/"
+    output_dir = cfg.output_dir + "/" + cfg.test_model
 
     os.makedirs(output_dir, exist_ok=True)
 

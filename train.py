@@ -29,6 +29,9 @@ from loss.softmax_loss import create_criterion
 from model import BaseModel, ResNet34, ResNet152, EfficientNet_b7  # model.py에서 model class import
 from timm.scheduler.step_lr import StepLRScheduler
 
+from solver.make_optimizer import make_optimizer
+from solver.scheduler_factory import create_scheduler
+
 def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -105,16 +108,19 @@ def train(data_dir, model_dir, cfg):
     # 현재 arguments값을 config.json파일로 dump하기(나중에 hyperparameter값을 알기 위해)
     with open(os.path.join(save_dir, 'config.yml'), 'w', encoding='utf-8') as f:
         yaml.dump(cfg, f)
-    
+        
     # -- settings
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
-    train_loader, val_loader, num_classes = make_dataloader(data_dir,cfg)
+
     # -- dataset
-    # dataset_module = getattr(import_module("dataset"), cfg.dataset)  # default: MaskBaseDataset
-    # dataset = dataset_module(
-    #     data_dir=data_dir,
-    # )
+    dataset_module = getattr(import_module("dataset"), cfg.dataset)  # default: MaskBaseDataset
+    dataset = dataset_module(
+        data_dir=data_dir,
+    )
+
+    train_loader, val_loader, train_set, val_set, num_classes = make_dataloader(dataset,cfg)
+
     # num_classes = dataset.num_classes  # 18
 
     # # -- augmentation
@@ -157,23 +163,30 @@ def train(data_dir, model_dir, cfg):
 
     # -- loss & metric
     loss_func, center_criterion = make_loss(cfg,num_classes = num_classes)
-    # criterion = create_criterion(cfg.criterion)  # default: cross_entropy
-    opt_module = getattr(import_module("torch.optim"), cfg.optimizer)  # SGD , Adam
-
-    optimizer = opt_module(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=cfg.lr,
-        weight_decay=5e-4
-    )
     
-    scheduler = StepLRScheduler(
-            optimizer,
-            decay_t=cfg.lr_decay_step,
-            decay_rate=0.5,
-            warmup_lr_init=2e-08,
-            warmup_t=5,
-            t_in_epochs=False,
-        )
+    
+    val_criterion = create_criterion("cross_entropy")  # default: cross_entropy
+    
+    # opt_module = getattr(import_module("torch.optim"), cfg.optimizer)  # SGD , Adam
+
+    optimizer = make_optimizer(cfg, model, center_criterion)
+
+    # optimizer = opt_module(
+    #     filter(lambda p: p.requires_grad, model.parameters()),
+    #     lr=cfg.lr,
+    #     weight_decay=5e-4
+    # )
+
+    scheduler = create_scheduler(cfg,optimizer)
+
+    # scheduler = StepLRScheduler(
+    #         optimizer,
+    #         decay_t=cfg.lr_decay_step,
+    #         decay_rate=0.5,
+    #         warmup_lr_init=2e-08,
+    #         warmup_t=5,
+    #         t_in_epochs=False,
+    #     )
 
     # scheduler = StepLR(optimizer, cfg.lr_decay_step, gamma=0.5)
 
@@ -182,7 +195,9 @@ def train(data_dir, model_dir, cfg):
 
     best_val_acc = 0
     best_val_loss = np.inf
-    for epoch in range(cfg.epochs):
+    for epoch in range(1, cfg.epochs+1):
+        scheduler.step(epoch)
+
         # train loop
         model.train()
         loss_value = 0
@@ -206,7 +221,8 @@ def train(data_dir, model_dir, cfg):
             if (idx + 1) % cfg.log_interval == 0:
                 train_loss = loss_value / cfg.log_interval
                 train_acc = matches / cfg.batch_size / cfg.log_interval
-                current_lr = get_lr(optimizer)
+                # current_lr = get_lr(optimizer)
+                current_lr = scheduler._get_lr(epoch)[0]
                 print(
                     f"Epoch[{epoch}/{cfg.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
@@ -233,10 +249,10 @@ def train(data_dir, model_dir, cfg):
                     inputs = inputs.to(device)
                     labels = labels.to(device)
 
-                    outs = model(inputs)
+                    outs = model(inputs)[1]
                     preds = torch.argmax(outs, dim=-1)
 
-                    loss_item = criterion(outs, labels).item()
+                    loss_item = val_criterion(outs, labels).item()
                     acc_item = (labels == preds).sum().item()
                     val_loss_items.append(loss_item)
                     val_acc_items.append(acc_item)
