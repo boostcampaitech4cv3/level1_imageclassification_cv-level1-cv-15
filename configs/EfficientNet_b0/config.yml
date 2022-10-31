@@ -2,10 +2,14 @@
 
 train : True
 
+# Augmentation
+
+random_erase : True
+
 # Model Hyperparams
 
 seed : 42
-epochs : 100
+epochs : 60
 dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
 augmentation : 'CustomAugmentation'
 cropsize : [320,256]
@@ -31,17 +35,24 @@ val_ratio : 0.2
 criterion : 'cross_entropy'
 lr_decay_step : 20
 log_interval : 20
-name : 'exp'
+name : 'exp76'
 
 # Validation
 
 validation_interval : 1
 valid_batch_size : 64
 
+# Sampler
+
+undersample_id : [0,1,3,4]
+undersample_rate : 3
+oversample_id : [8,11,17]
+# oversample_rate : 5
+
 # Loss
 
 sampler : 'softmax_triplet' # softmax, triplet, triplet hard
-num_instance : 8 
+num_instance : 8
 loss_type : 'triplet'
 feat_norm : False
 ID_loss_weight : 0.5
@@ -53,7 +64,7 @@ margin : 0.3
 
 test_data_dir : '/opt/ml/input/data/eval'
 test_batch_size : 64
-test_model : 'exp62'
+test_model : 'exp75'
 
 # WANDB
  

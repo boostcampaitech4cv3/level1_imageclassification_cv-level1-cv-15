@@ -9,6 +9,8 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset, Subset, random_split
 from torchvision.transforms import Resize, ToTensor, Normalize, Compose, CenterCrop, ColorJitter
+from timm.data.random_erasing import RandomErasing
+from config.defaults import _C as cfg
 
 IMG_EXTENSIONS = [
     ".jpg", ".JPG", ".jpeg", ".JPEG", ".png",
@@ -51,15 +53,25 @@ class AddGaussianNoise(object):
 
 class CustomAugmentation:
     def __init__(self, resize, cropsize, mean, std, **args):
-        self.transform = Compose([
-            CenterCrop((cropsize[0],cropsize[1])),
-            Resize(resize, Image.BILINEAR),
-            ColorJitter(0.1, 0.1, 0.1, 0.1),
-            ToTensor(),
-            Normalize(mean=mean, std=std),
-            # AddGaussianNoise()
-        ])
-
+        if cfg.random_erase : 
+            self.transform = Compose([
+                CenterCrop((cropsize[0],cropsize[1])),
+                Resize(resize, Image.BILINEAR),
+                ColorJitter(0.1, 0.1, 0.1, 0.1),
+                ToTensor(),
+                Normalize(mean=mean, std=std),
+                RandomErasing(probability=0.5, mode='pixel', max_count=1, device='cpu'),
+                # AddGaussianNoise()
+            ])
+        else:
+            self.transform = Compose([
+                CenterCrop((cropsize[0],cropsize[1])),
+                Resize(resize, Image.BILINEAR),
+                ColorJitter(0.1, 0.1, 0.1, 0.1),
+                ToTensor(),
+                Normalize(mean=mean, std=std),
+                # AddGaussianNoise()
+            ])
     def __call__(self, image):
         return self.transform(image)
 
@@ -298,7 +310,7 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                         self.val_image_with_ID.append((img_path,mask_label * 6 + gender_label * 3 + age_label))
                     self.indices[phase].append(cnt)
                     cnt += 1
-
+        self.train_image_with_ID = sorted(self.train_image_with_ID, key = lambda x : x[1])
     def split_dataset(self) -> List[Subset]:
         return [Subset(self, indices) for phase, indices in self.indices.items()]
 
@@ -323,7 +335,7 @@ class TestDataset(Dataset):
 
 class ImageDataset(Dataset): # ImageDataset class : DataLoader에 들어갈 instance 생성자 __len__, _getitem__ method 
     def __init__(self, dataset, transform=None):
-        self.dataset = dataset # dataset list 
+        self.dataset = sorted(dataset,key=lambda x : x[1]) # dataset list 
         self.transform = transform # transform list
     def __len__(self):
         return len(self.dataset)

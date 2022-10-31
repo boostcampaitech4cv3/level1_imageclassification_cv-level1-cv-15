@@ -23,3 +23,4 @@ config: {'train': True, 'seed': 42, 'dataset': 'MaskSplitByProfileDataset', 'aug
 2022-10-30 12:46:03,904 INFO    MainThread:21913 [wandb_run.py:_redirect():1903] Wrapping output streams.
 2022-10-30 12:46:03,904 INFO    MainThread:21913 [wandb_run.py:_redirect():1925] Redirects installed.
 2022-10-30 12:46:03,904 INFO    MainThread:21913 [wandb_init.py:init():765] run started, returning control to user process
+2022-10-30 14:31:41,864 WARNING MsgRouterThr:21913 [router.py:message_loop():77] message_loop has been closed

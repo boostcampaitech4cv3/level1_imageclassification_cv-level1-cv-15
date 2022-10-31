@@ -16,9 +16,7 @@ _C.resize = [128, 96]
 _C.batch_size = 64
 _C.model = "BaseModel"
 
-
 # Training
-
 _C.val_ratio = 0.2
 _C.criterion = 'cross_entropy'
 _C.lr_decay_step = 20
@@ -59,8 +57,18 @@ _C.warmup_method = "linear"
 _C.cosine_margin = 0.5
 _C.cosine_scale = 30
 
-# Loss
+# Sampler
 
+_C.undersample_id = [0,1,3,4]
+_C.undersample_rate = 5
+_C.oversample_id = [8,11] # 17번 제외
+_C.oversample_rate = 5
+
+# Augmentation
+
+_C.random_erase = False
+
+# Loss
 _C.sampler = 'triplet' # triplet, triplet hard
 _C.num_instance = 4
 _C.loss_type = 'softmax_triplet'

@@ -147,13 +147,13 @@ def train(data_dir, model_dir, cfg):
             inputs, labels = train_batch
             inputs = inputs.to(device)
             labels = labels.to(device)
-
+            # print(f"{idx+1}th labels:{labels}")
             optimizer.zero_grad()
 
             feat, score = model(inputs)
             preds = torch.argmax(score, dim=-1)
             #loss = criterion(outs, labels)
-            loss = loss_func(score, feat, labels)
+            loss, ce_loss, tri_loss = loss_func(score, feat, labels)
             loss.backward()
             optimizer.step()
 
@@ -174,7 +174,9 @@ def train(data_dir, model_dir, cfg):
 
                 if cfg.wandb:
                     wandb.log({ 'Train Epoch': epoch, 
-                                'Train Loss' : train_loss, 
+                                'Total Loss' : train_loss, 
+                                'CE Loss' : ce_loss,
+                                'Tri Loss' : tri_loss,
                                 'Learning rate': scheduler._get_lr(epoch)[0],
                                 'Train Acc': train_acc})   
 

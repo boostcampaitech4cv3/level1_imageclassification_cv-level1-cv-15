@@ -94,13 +94,17 @@ class EfficientNet_b7(nn.Module):
         super().__init__()
         
         self.model = EfficientNet.from_pretrained('efficientnet-b7',num_classes=18)
-        self.model.fc = nn.Linear(in_features = 2560, out_features = num_classes, bias = True)
-        nn.init.xavier_uniform(self.model.fc.weight)
-        
+        self.model._fc = nn.Identity()
+        self.classifier = nn.Linear(in_features = 2560, out_features = num_classes, bias = True)
+
+        self.classifier.apply(weights_init_classifier)
+
     def forward(self, x):
 
-        x = self.model(x)
-        return x
+        feat = self.model(x)
+        cls_score = self.classifier(feat)
+
+        return feat, cls_score
 
 class EfficientNet_b0(nn.Module):
     def __init__(self,num_classes = 18):
@@ -122,4 +126,24 @@ class EfficientNet_b0(nn.Module):
 
         return feat, cls_score
     
+
+class EfficientNet_b4(nn.Module):
+    def __init__(self,num_classes = 18):
+        super().__init__()
+
+        self.model = EfficientNet.from_pretrained('efficientnet-b4',num_classes = 18)
+
+        self.model._fc = nn.Identity()
+        self.classifier = nn.Linear(in_features = 1280, out_features = num_classes, bias = True)
+        # nn.init.xavier_uniform(self.classifier.weight)
+
+        self.classifier.apply(weights_init_classifier)
+        # self.classifier.apply(weights_init_kaiming)
+    def forward(self, x):
+
+        feat = self.model(x)
         
+        cls_score = self.classifier(feat)
+
+        return feat, cls_score
+    

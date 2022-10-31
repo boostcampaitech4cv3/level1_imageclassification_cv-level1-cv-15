@@ -37,11 +37,11 @@ def make_loss(cfg,num_classes): # make loss는 class가 아닌 definition
                 if cfg.label_smooth:
                     ID_LOSS = xent(score, target) # LabelSmooth
                     TRI_LOSS = triplet(feat, target)[0]
-                    return cfg.ID_loss_weight * ID_LOSS + cfg.triplet_loss_weight * TRI_LOSS
+                    return cfg.ID_loss_weight * ID_LOSS + cfg.triplet_loss_weight * TRI_LOSS , cfg.ID_loss_weight * ID_LOSS, cfg.triplet_loss_weight * TRI_LOSS
             
                 else:
                     ID_LOSS = F.cross_entropy(score, target)
                     TRI_LOSS = triplet(feat, target)[0]
-                    return cfg.ID_loss_weight * ID_LOSS + cfg.triplet_loss_weight * TRI_LOSS
+                    return cfg.ID_loss_weight * ID_LOSS + cfg.triplet_loss_weight * TRI_LOSS, cfg.ID_loss_weight * ID_LOSS, cfg.triplet_loss_weight * TRI_LOSS
                     
     return loss_func, center_criterion

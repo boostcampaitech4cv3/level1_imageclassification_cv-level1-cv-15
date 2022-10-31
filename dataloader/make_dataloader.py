@@ -38,7 +38,7 @@ def make_dataloader(dataset,cfg):
         train_loader = DataLoader( 
             train_set, 
             batch_size=cfg.batch_size,
-            sampler=RandomIdentitySampler(dataset.train_image_with_ID, cfg.batch_size, cfg.num_instance),
+            sampler=RandomIdentitySampler(dataset.train_image_with_ID, cfg),
             num_workers=multiprocessing.cpu_count() // 2, 
             collate_fn=train_collate_fn,
             pin_memory=torch.cuda.is_available(),
@@ -64,7 +64,7 @@ def make_dataloader(dataset,cfg):
         num_workers=multiprocessing.cpu_count() // 2,
         shuffle=False,
         pin_memory=torch.cuda.is_available(),
-        drop_last=True,
+        drop_last=False,
     )
     
     return train_loader, val_loader, train_set, val_set, num_classes 
