@@ -29,6 +29,18 @@ def seed_everything(seed):
     np.random.seed(seed)
     random.seed(seed)
 
+def make_weights(labels, nclasses):
+    labels = np.array(labels) 
+    weight_arr = np.zeros_like(labels) 
+    
+    _, counts = np.unique(labels, return_counts=True) 
+    for cls in range(nclasses):
+        weight_arr = np.where(labels == cls, 1/counts[cls], weight_arr) 
+        # 각 클래스의의 인덱스를 산출하여 해당 클래스 개수의 역수를 확률로 할당한다.
+        # 이를 통해 각 클래스의 전체 가중치를 동일하게 한다.
+ 
+    return weight_arr
+
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -54,6 +66,9 @@ def increment_path(path, exist_ok=False):
 def train(data_dir, model_dir, args):
     seed_everything(args.seed)
     df=pd.read_csv('input/data/train/kfold.csv')
+    df=df.sample(
+    frac=1,
+    random_state=42).reset_index()
     for i in range(5):
         save_dir = increment_path(os.path.join(model_dir,args.name))
         if not os.path.isdir(save_dir):
@@ -90,13 +105,20 @@ def train(data_dir, model_dir, args):
         )
         train_set.set_transform(transform)
         val_set.set_transform(test_transform)
+
+        weights=make_weights(train_set.labels,18)
+
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
+
+
         train_loader = DataLoader(
             train_set,
             batch_size=args.batch_size,
             num_workers=multiprocessing.cpu_count() // 2,
-            shuffle=True,
+            shuffle=False,
             pin_memory=use_cuda,
             drop_last=True,
+            sampler=sampler
         )
 
         val_loader = DataLoader(
@@ -132,6 +154,8 @@ def train(data_dir, model_dir, args):
         )
         
         patience=0
+        best_val_acc = 0
+        best_val_loss = np.inf
         for epoch in range(args.epochs):
             # train loop
             model.train()
@@ -152,6 +176,8 @@ def train(data_dir, model_dir, args):
                 preds = torch.argmax(outs, dim=-1)
                 loss_value += loss.item()
                 matches += (preds == labels).sum().item()
+
+                current_lr = get_lr(optimizer)
                 if (idx + 1) % args.log_interval == 0:
                     train_loss = loss_value / args.log_interval
                     train_acc = matches / args.batch_size / args.log_interval
@@ -166,37 +192,74 @@ def train(data_dir, model_dir, args):
 
 
             scheduler.step_update(epoch + 1)
+            mask_total=[0,0,0]
+            mask_correct=[0,0,0]
+
+            gender_total=[0,0,0]
+            gender_correct=[0,0,0]
+
+            age_total=[0,0,0]
+            age_correct=[0,0,0]
+
             target_list=[]
             pred_list=[]
 
             with torch.no_grad():
-                print("Calculating validation results...")
-                model.eval()
-                val_loss_items = []
-                val_acc_items = []
-                figure = None
 
-                for val_batch in val_loader:
-                    inputs, labels = val_batch
-                    inputs = inputs.to(device)
-                    labels = labels.to(device)
+                    print("Calculating validation results...")
+                    model.eval()
+                    val_loss_items = []
+                    val_acc_items = []
+                    figure = None
 
-                    outs = model(inputs)
-                    preds = torch.argmax(outs, dim=-1)
+                    for val_batch in val_loader:
+                        inputs, labels = val_batch
+                        inputs = inputs.to(device)
+                        labels = labels.to(device)
 
-                    loss_item = criterion(outs, labels).item()
-                    acc_item = (labels == preds).sum().item()
-                    val_loss_items.append(loss_item)
-                    val_acc_items.append(acc_item)
+                        for la in labels:
+                            la=la.item()
+                            mask_total[la//6]+=1
+                            if la%2==0:
+                                gender_total[0]+=1
+                            else:
+                                gender_total[1]+=1
+                            if la%3==0:
+                                age_total[0]+=1
+                            elif la%3==1:
+                                age_total[1]+=1
+                            else:
+                                age_total[2]+=1
+                    
+
+                        outs = model(inputs)
+                        preds = torch.argmax(outs, dim=-1)
+
+                        pred_list.extend(preds.cpu().detach().numpy())
+                        target_list.extend(labels.cpu().detach().numpy())
+
+                        loss_item = criterion(outs, labels).item()
+                        acc_item = (labels == preds).sum().item()
+                        val_loss_items.append(loss_item)
+                        val_acc_items.append(acc_item)
                         
-                    val_f1=f1_score(np.array(target_list),np.array(pred_list),average='macro')
+                        val_f1=f1_score(np.array(target_list),np.array(pred_list),average='macro')
 
-                    if figure is None:
-                        inputs_np = torch.clone(inputs).detach().cpu().permute(0, 2, 3, 1).numpy()
-                        inputs_np = dataset_module.denormalize_image(inputs_np, dataset.mean, dataset.std)
-                        figure = grid_image(
-                            inputs_np, labels, preds, n=16, shuffle=args.dataset != "MaskSplitByProfileDataset"
-                        )
+                        for (la,pr) in zip(labels,preds):
+                            la=la.item()
+                            pr=pr.item()
+                            if la//6==pr//6:
+                                mask_correct[la//6]+=1
+                            
+                            if la%2==pr%2:
+                                gender_correct[la%2]+=1
+                            
+                            if la%3==pr%3:
+                                age_correct[la%3]+=1
+
+                            if la%3==2:
+                                print(pr%3,end=' ')
+
                     print(f'age<30:{age_correct[0]/age_total[0]:4.2%}')
                     print(f'30<=age<60:{age_correct[1]/age_total[1]:4.2%}')
                     print(f'age>=60:{age_correct[2]/age_total[2]:4.2%}')
@@ -216,24 +279,21 @@ def train(data_dir, model_dir, args):
                         print(f"New best model for val accuracy in epoch {epoch}: {val_acc:4.2%}! saving the best model..")
                         torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
                         best_val_acc = val_acc
-                        patience=0
                     else:
                         patience+=1
+
                     torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
                     print(
                         f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                         f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} ||"
                         f"f1_score: {val_f1:4.2%}"
-                    )            
+                    )              
 
 
-                    # Tensorboard
-                    # logger.add_scalar("Val/loss", val_loss, epoch)
-                    # logger.add_scalar("Val/accuracy", val_acc, epoch)
-                    # logger.add_figure("results", figure, epoch)
+
                     print()
-                    if patience==args.patience:
-                        break
+            if patience==args.patience:
+                break
 
 
 if __name__ == '__main__':

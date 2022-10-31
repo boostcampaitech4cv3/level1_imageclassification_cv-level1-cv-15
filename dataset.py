@@ -60,7 +60,7 @@ class CustomAugmentation:
         self.transform = A.Compose([
             A.HorizontalFlip(),
             A.CenterCrop(320, 256),
-            A.Resize(224,224),
+            A.Resize(384,384),
             A.ColorJitter(0.1, 0.1, 0.1, 0.1),
             #A.CLAHE(always_apply=False, p=0.5, clip_limit=(1, 15), tile_grid_size=(8, 8)),
             A.Equalize(always_apply=False, p=0.5, mode='cv', by_channels=False),
@@ -71,19 +71,6 @@ class CustomAugmentation:
 
     def __call__(self, image):
         return self.transform(image=image)['image']
-
-class CustomTestAugmentation:
-    def __init__(self, resize, mean, std, **args):
-        self.transform = A.Compose([
-            A.CenterCrop(320, 256),
-            A.Resize(224,224),
-            A.Normalize(mean=mean, std=std),
-            ToTensorV2(),
-        ])
-
-    def __call__(self, image):
-        return self.transform(image=image)['image']
-
 
 
 class fold_mask(Dataset):
@@ -338,7 +325,7 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     
                     if phase=='train':
 
-                        if int(age)>=18 and int(age)<=20 and mask_sampled_2<2:
+                        if int(age)>=50 and int(age)<60 and mask_sampled_2<3:
                             mask_sampled_2+=1
                             continue
 
@@ -357,6 +344,8 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
         profiles = [profile for profile in profiles if not profile.startswith(".")]
         split_profiles = self._split_profile(profiles, self.val_ratio)
 
+       
+
         cnt = 0
         for phase, indices in split_profiles.items():
             for _idx in indices:
@@ -373,6 +362,12 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     id, gender, race, age = profile.split("_")
                     gender_label = GenderLabels.from_str(gender)
                     age_label = AgeLabels.from_number(age)
+                    if phase=='train':
+                        if 55<=int(age)<60 and ('mask4' in _file_name or 'mask2' in _file_name or 'mask3' in _file_name):
+                            print(1)
+                            continue
+                        if 50<=int(age)<55 and ('mask2' in _file_name or 'mask3' in _file_name):
+                            continue
 
                     self.image_paths.append(img_path)
                     self.mask_labels.append(mask_label)

@@ -33,13 +33,16 @@ kf=StratifiedKFold(n_splits=5,shuffle=True,random_state=42)
 for fold,(train_idx,val_idx) in enumerate(kf.split(range(len(df)),y=df['label'])):
     df.loc[val_idx,'fold']=fold
 
-k_fold_df=pd.DataFrame(columns=['path','label','fold'])
+k_fold_df=pd.DataFrame(columns=['path','label','fold','gender','age'])
 
 for i in range(len(df)):
     gender_label=0
     age_label=0
 
-    if 30<=df.at[i,'age']<60:
+    gender=df.at[i,'gender']
+    age=df.at[i,'age']
+
+    if 50<=df.at[i,'age']<60:
         age_label=1
     elif df.at[i,'age']>=60:
         age_label=2
@@ -49,6 +52,9 @@ for i in range(len(df)):
     folder_name=os.path.join('input/data/train/images',df.at[i,'path'])
     for file in os.listdir(folder_name):
         head,ext=os.path.splitext(file)
+        if 30<=age<60 and ('mask1' in head or 'mask2' in head or 'mask3' in head):
+            continue
+
         if head in IMG_HEAD:
             mask_label=0
             if 'incorrect' in head:
@@ -60,7 +66,7 @@ for i in range(len(df)):
             label=gender_label+mask_label+age_label
             fold=df.at[i,'fold']
             
-            k_fold_df=k_fold_df.append(pd.DataFrame([[path,label,fold]],columns=['path','label','fold']))
+            k_fold_df=k_fold_df.append(pd.DataFrame([[path,label,gender,age,fold]],columns=['path','label','gender','age','fold']))
 
 print(k_fold_df)
 k_fold_df.to_csv('input/data/train/kfold.csv',index=False)
