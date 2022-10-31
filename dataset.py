@@ -90,6 +90,23 @@ class fold_mask(Dataset):
         image=cv2.imread(img_path)
         image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
 
+        rectangle=(50,80,256,312)
+        mask = np.zeros(image.shape[:2], np.uint8)
+        bgdModel = np.zeros((1, 65), np.float64)
+        fgdModel = np.zeros((1, 65), np.float64)
+
+        cv2.grabCut(image, # 원본 이미지
+           mask,       # 마스크
+           rectangle,  # 사각형
+           bgdModel,   # 배경을 위한 임시 배열
+           fgdModel,   # 전경을 위한 임시 배열 
+           5,          # 반복 횟수
+           cv2.GC_INIT_WITH_RECT) # 사각형을 위한 초기화
+        mask_2 = np.where((mask==2) | (mask==0), 0, 1).astype('uint8')  
+        image = image * mask_2[:, :, np.newaxis]
+
+        
+
         if self.transforms is not None:
             image=self.transforms(image)
         label=self.labels[index]
@@ -390,17 +407,39 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
 class TestDataset(Dataset):
     def __init__(self, img_paths, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
         self.img_paths = img_paths
-        self.transform = Compose([
-            Resize(resize, Image.BILINEAR),
-            ToTensor(),
-            Normalize(mean=mean, std=std),
+        self.transform = A.Compose([
+            #A.HorizontalFlip(),
+            A.CenterCrop(320, 256),
+            A.Resize(384,384),
+            #A.ColorJitter(0.1, 0.1, 0.1, 0.1),
+            #A.CLAHE(always_apply=False, p=0.5, clip_limit=(1, 15), tile_grid_size=(8, 8)),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2(),
         ])
 
+    def __call__(self, image):
+        return self.transform(image=image)['image']
+
     def __getitem__(self, index):
-        image = Image.open(self.img_paths[index])
+        image = cv2.imread(self.img_paths[index])
+        image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+        rectangle=(50,80,256,312)
+        mask = np.zeros(image.shape[:2], np.uint8)
+        bgdModel = np.zeros((1, 65), np.float64)
+        fgdModel = np.zeros((1, 65), np.float64)
+
+        cv2.grabCut(image, # 원본 이미지
+           mask,       # 마스크
+           rectangle,  # 사각형
+           bgdModel,   # 배경을 위한 임시 배열
+           fgdModel,   # 전경을 위한 임시 배열 
+           5,          # 반복 횟수
+           cv2.GC_INIT_WITH_RECT) # 사각형을 위한 초기화
+        mask_2 = np.where((mask==2) | (mask==0), 0, 1).astype('uint8')  
+        image = image * mask_2[:, :, np.newaxis]
 
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image=image)['image']
         return image
 
     def __len__(self):
