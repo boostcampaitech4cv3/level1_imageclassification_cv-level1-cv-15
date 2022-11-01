@@ -176,7 +176,7 @@ def train(data_dir, model_dir, args):
     # -- early stopping
     early_stopping = EarlyStopping(patience=args.earlystop, delta=args.delta, path=f"{save_dir}/best.pth")
 
-    for epoch in range(args.epochs):
+    for epoch in range(1,args.epochs+1):
         # train loop
         model.train()
         loss_value = 0

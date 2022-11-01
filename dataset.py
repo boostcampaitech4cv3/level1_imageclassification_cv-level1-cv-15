@@ -52,7 +52,7 @@ class AddGaussianNoise(object):
 class CustomAugmentation:
     def __init__(self, resize, mean, std, **args):
         self.transform = Compose([
-            CenterCrop((320, 256)),
+            CenterCrop((256, 256)),
             Resize(resize, Image.BILINEAR),
             ColorJitter(0.1, 0.1, 0.1, 0.1),
             ToTensor(),
@@ -314,7 +314,7 @@ class TestDataset(Dataset):
     def __init__(self, img_paths, resize, mean=(0.55800662,0.51224152,0.47766819), std=(0.21789488,0.23798859,0.25171667)):
         self.img_paths = img_paths
         self.transform = Compose([
-            CenterCrop((320, 256)),
+            CenterCrop((256, 256)),
             Resize(resize, Image.BILINEAR),
             # ColorJitter(0.1, 0.1, 0.1, 0.1),
             ToTensor(),
