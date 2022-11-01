@@ -109,7 +109,7 @@ def train(data_dir, model_dir, args):
 
         weights=make_weights(train_set.labels,18)
 
-        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
+        #sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
 
 
         train_loader = DataLoader(
@@ -119,7 +119,7 @@ def train(data_dir, model_dir, args):
             shuffle=False,
             pin_memory=use_cuda,
             drop_last=False,
-            sampler=sampler
+            #sampler=sampler
         )
 
         val_loader = DataLoader(
@@ -144,7 +144,6 @@ def train(data_dir, model_dir, args):
             lr=args.lr,
             weight_decay=5e-4
         )
-        
         scheduler = StepLRScheduler(
             optimizer,
             decay_t=args.lr_decay_step,

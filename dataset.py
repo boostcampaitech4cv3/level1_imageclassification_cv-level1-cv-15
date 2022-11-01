@@ -306,7 +306,8 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
 
         cnt=0
         for (phase, indices) in split_profiles.items():
-            mask_sampled_2=0
+
+            #mask_sampled_2=0
             #mask_sampled_3=0
             for _idx in indices:
                 profile = profiles[_idx]
@@ -324,11 +325,12 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     age_label = AgeLabels.from_number(age)
                     
                     if phase=='train':
-
-                        if int(age)>=50 and int(age)<60 and mask_sampled_2<3:
-                            mask_sampled_2+=1
+                        if int(age)==59:
                             continue
-
+                    #    if int(age)>=50 and int(age)<60 and mask_sampled_2<3:
+                     #       mask_sampled_2+=1
+                      #      continue
+                    
 
                     self.image_paths.append(img_path)
                     self.mask_labels.append(mask_label)
@@ -360,15 +362,15 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     mask_label = self._file_names[_file_name]
 
                     id, gender, race, age = profile.split("_")
+                    
                     gender_label = GenderLabels.from_str(gender)
                     age_label = AgeLabels.from_number(age)
-                    if phase=='train':
-                        if 55<=int(age)<60 and ('mask4' in _file_name or 'mask2' in _file_name or 'mask3' in _file_name):
-                            print(1)
+                    #if phase=='train':                  
+                      #  if 57<=int(age)<60 and ('mask4' in _file_name or 'mask2' in _file_name or 'mask3' in _file_name):
                             continue
-                        if 50<=int(age)<55 and ('mask2' in _file_name or 'mask3' in _file_name):
-                            continue
-
+                        #if 50<=int(age)<55 and ('mask2' in _file_name or 'mask3' in _file_name):
+                         #   continue
+                        
                     self.image_paths.append(img_path)
                     self.mask_labels.append(mask_label)
                     self.gender_labels.append(gender_label)

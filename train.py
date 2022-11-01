@@ -177,8 +177,8 @@ def train(data_dir, model_dir, args):
     # -- loss & metric
     #criterion = create_criterion(args.criterion)  # default: cross_entropy
     #criterion=FocalLoss(gamma=2)
-    #criterion=F1Loss()
-    criterion=torch.nn.CrossEntropyLoss()
+    criterion=F1Loss()
+    #criterion=torch.nn.CrossEntropyLoss()
     if args.optimizer!='sam':
         opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
         optimizer = opt_module(
@@ -239,12 +239,12 @@ def train(data_dir, model_dir, args):
                 outs=model(inputs)
                 loss=criterion(outs,labels)
             '''
+            optimizer.zero_grad()
             outs=model(inputs)
             loss=criterion(outs,labels)
 
             loss.backward()
             if args.optimizer!='sam':
-                optimizer.zero_grad()
                 optimizer.step()
             else:
                 optimizer.first_step(zero_grad=True)
@@ -276,14 +276,8 @@ def train(data_dir, model_dir, args):
 
         #if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         # val loop
-        mask_total=[0,0,0]
-        mask_correct=[0,0,0]
-
-        gender_total=[0,0,0]
-        gender_correct=[0,0,0]
-
-        age_total=[0,0,0]
-        age_correct=[0,0,0]
+        corrects=[0]*18
+        totals=[0]*18
 
         target_list=[]
         pred_list=[]
@@ -303,17 +297,7 @@ def train(data_dir, model_dir, args):
 
                     for la in labels:
                         la=la.item()
-                        mask_total[la//6]+=1
-                        if la%2==0:
-                            gender_total[0]+=1
-                        else:
-                            gender_total[1]+=1
-                        if la%3==0:
-                            age_total[0]+=1
-                        elif la%3==1:
-                            age_total[1]+=1
-                        else:
-                            age_total[2]+=1
+                        totals[la]+=1
                 
 
                     outs = model(inputs)
@@ -332,17 +316,8 @@ def train(data_dir, model_dir, args):
                     for (la,pr) in zip(labels,preds):
                         la=la.item()
                         pr=pr.item()
-                        if la//6==pr//6:
-                            mask_correct[la//6]+=1
-                        
-                        if la%2==pr%2:
-                            gender_correct[la%2]+=1
-                        
-                        if la%3==pr%3:
-                            age_correct[la%3]+=1
-
-                        if la%3==2:
-                            print(pr%3,end=' ')
+                        if la==pr:
+                            corrects[la]+=1
 
 
 
@@ -352,16 +327,8 @@ def train(data_dir, model_dir, args):
                         figure = grid_image(
                             inputs_np, labels, preds, n=16, shuffle=args.dataset != "MaskSplitByProfileDataset"
                         )
-                print(f'age<30:{age_correct[0]/age_total[0]:4.2%}')
-                print(f'30<=age<60:{age_correct[1]/age_total[1]:4.2%}')
-                print(f'age>=60:{age_correct[2]/age_total[2]:4.2%}')
-
-                print(f'mask_wear:{mask_correct[0]/mask_total[0]:4.2%}')
-                print(f'mask_incorrect{mask_correct[1]/mask_total[1]:4.2%}')
-                print(f'mask_wrong{mask_correct[2]/mask_total[2]:4.2%}')
-
-                print(f'male:{gender_correct[0]/gender_total[0]:4.2%}')
-                print(f'female{gender_correct[1]/gender_total[1]:4.2%}')
+                for ind,(c,t) in enumerate(zip(corrects,totals)):
+                    print(f'label {ind}:{c/t:4.2%}')
 
                 val_loss = np.sum(val_loss_items) / len(val_loader)
                 val_acc = np.sum(val_acc_items) / len(val_set)
