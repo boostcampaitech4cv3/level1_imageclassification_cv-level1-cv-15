@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 from loss import FocalLoss
 import pandas as pd
 
+from loss import F1Loss
 from mixup import mixup,mixed_criterion
 from timm.scheduler.step_lr import StepLRScheduler
 from sklearn.metrics import f1_score
@@ -97,7 +98,7 @@ def train(data_dir, model_dir, args):
             mean=train_set.mean,
             std=train_set.std,
         )
-        test_transform_modele=getattr(import_module('dataset'),'CustomTestAugmentation')
+        test_transform_modele=getattr(import_module('dataset'),'CustomAugmentation')
         test_transform = transform_module(
             resize=args.resize,
             mean=train_set.mean,
@@ -117,7 +118,7 @@ def train(data_dir, model_dir, args):
             num_workers=multiprocessing.cpu_count() // 2,
             shuffle=False,
             pin_memory=use_cuda,
-            drop_last=True,
+            drop_last=False,
             sampler=sampler
         )
 
@@ -127,7 +128,7 @@ def train(data_dir, model_dir, args):
             num_workers=multiprocessing.cpu_count() // 2,
             shuffle=False,
             pin_memory=use_cuda,
-            drop_last=True,
+            drop_last=False,
         )
 
         model_module = getattr(import_module("model"), args.model)  # default: BaseModel
@@ -136,7 +137,7 @@ def train(data_dir, model_dir, args):
         ).to(device)
         model = torch.nn.DataParallel(model)
 
-        criterion=FocalLoss(gamma=2)
+        criterion=F1Loss()
         opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
         optimizer = opt_module(
             filter(lambda p: p.requires_grad, model.parameters()),

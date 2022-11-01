@@ -20,7 +20,7 @@ from timm.scheduler.step_lr import StepLRScheduler
 from sklearn.metrics import f1_score
 
 # from torch.utils.tensorboard import SummaryWriter 
-
+from sam import SAM
 from dataset import MaskBaseDataset   # dataset class import
 from loss import create_criterion,F1Loss
 from model import SwinNet  # model.py에서 model class import
@@ -177,16 +177,25 @@ def train(data_dir, model_dir, args):
     # -- loss & metric
     #criterion = create_criterion(args.criterion)  # default: cross_entropy
     #criterion=FocalLoss(gamma=2)
-    criterion=FocalLoss(gamma=2)
-    opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
-    optimizer = opt_module(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.lr,
-        weight_decay=5e-4
-    )
+    #criterion=F1Loss()
+    criterion=torch.nn.CrossEntropyLoss()
+    if args.optimizer!='sam':
+        opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
+        optimizer = opt_module(
+            filter(lambda p: p.requires_grad, model.parameters()),
+            lr=args.lr,
+            weight_decay=5e-4
+        )
+
+    if args.optimizer=='sam':
+        base_optimizer=torch.optim.Adam
+        optimizer=SAM(model.parameters(),base_optimizer,lr=args.lr)
+
+
     #optimizer=AdamP(model.parameters(),lr=args.lr)
 
     #scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    
     scheduler = StepLRScheduler(
             optimizer,
             decay_t=args.lr_decay_step,
@@ -215,8 +224,8 @@ def train(data_dir, model_dir, args):
             inputs = inputs.to(device)
             labels = labels.to(device)
 
-            custom_imshow(inputs[0])
-            optimizer.zero_grad()
+
+
             
             #v=random.randint(1,2)
             '''
@@ -234,7 +243,14 @@ def train(data_dir, model_dir, args):
             loss=criterion(outs,labels)
 
             loss.backward()
-            optimizer.step()
+            if args.optimizer!='sam':
+                optimizer.zero_grad()
+                optimizer.step()
+            else:
+                optimizer.first_step(zero_grad=True)
+                criterion(model(inputs),labels).backward()
+                optimizer.second_step(zero_grad=True)
+
 
             preds = torch.argmax(outs, dim=-1)
 

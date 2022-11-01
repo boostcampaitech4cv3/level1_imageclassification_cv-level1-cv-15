@@ -43,6 +43,7 @@ class EfficientNet(nn.Module):
 
         self.fc = nn.Linear(1000, num_classes)
 
+
     def forward(self, x):
         """
         1. 위에서 정의한 모델 아키텍쳐를 forward propagation 을 진행해주세요
@@ -55,7 +56,6 @@ class EfficientNet(nn.Module):
 
         x = self.fc(x)
         # x shape: batch_size, num_classes
-
         return x
 
 

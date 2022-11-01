@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import os
+from loss import F1Loss
 args=None
 df=pd.read_csv('input/data/train/train.csv')
 
@@ -52,8 +53,8 @@ for i in range(len(df)):
     folder_name=os.path.join('input/data/train/images',df.at[i,'path'])
     for file in os.listdir(folder_name):
         head,ext=os.path.splitext(file)
-        if 30<=age<60 and ('mask1' in head or 'mask2' in head or 'mask3' in head):
-            continue
+        #if 30<=age<60 and ('mask1' in head or 'mask2' in head or 'mask3' in head):
+         #   continue
 
         if head in IMG_HEAD:
             mask_label=0
