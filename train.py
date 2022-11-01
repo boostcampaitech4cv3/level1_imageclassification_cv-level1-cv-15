@@ -142,7 +142,7 @@ def train(data_dir, model_dir, args):
     )
 
     # -- model
-    model_module = getattr(import_module("model"), args.model)  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
+    model_module = getattr(import_module("model"), "EfficientNet_b7")  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
     model = model_module(
         num_classes=num_classes
     ).to(device)

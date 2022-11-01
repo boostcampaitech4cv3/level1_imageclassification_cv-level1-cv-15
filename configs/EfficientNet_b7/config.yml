@@ -26,7 +26,7 @@ valid_batch_size : 64
 # Test
 test_data_dir : '/opt/ml/input/data/eval'
 test_batch_size : 64
-test_model : 'exp16'
+test_model : 'exp'
 # Container environment
 
 data_dir : '/opt/ml/input/data/train/images'
