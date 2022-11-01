@@ -57,12 +57,25 @@ class CustomAugmentation:
             ColorJitter(0.1, 0.1, 0.1, 0.1),
             ToTensor(),
             Normalize(mean=mean, std=std),
-            AddGaussianNoise()
+            # AddGaussianNoise()
         ])
 
     def __call__(self, image):
         return self.transform(image)
 
+# class CustomTestAugmentation:
+#     def __init__(self, resize, mean, std, **args):
+#         self.transform = Compose([
+#             CenterCrop((320, 256)),
+#             Resize(resize, Image.BILINEAR),
+#             # ColorJitter(0.1, 0.1, 0.1, 0.1),
+#             ToTensor(),
+#             Normalize(mean=mean, std=std),
+#             # AddGaussianNoise()
+#         ])
+
+#     def __call__(self, image):
+#         return self.transform(image)
 
 class MaskLabels(int, Enum):
     MASK = 0
@@ -106,7 +119,7 @@ class AgeLabels(int, Enum):
 
 
 class MaskBaseDataset(Dataset):
-    num_classes = 3 * 2 * 3 # 
+    num_classes = 3 * 2 * 3 # 18
 
     _file_names = {
         "mask1": MaskLabels.MASK, # 0
@@ -245,7 +258,7 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
         이후 `split_dataset` 에서 index 에 맞게 Subset 으로 dataset 을 분기합니다.
     """
 
-    def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246), val_ratio=0.2):
+    def __init__(self, data_dir, mean=(0.55800662,0.51224152,0.47766819), std=(0.21789488,0.23798859,0.25171667), val_ratio=0.2):
         self.indices = defaultdict(list)
         super().__init__(data_dir, mean, std, val_ratio)
 
@@ -298,10 +311,12 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
 
 
 class TestDataset(Dataset):
-    def __init__(self, img_paths, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
+    def __init__(self, img_paths, resize, mean=(0.55800662,0.51224152,0.47766819), std=(0.21789488,0.23798859,0.25171667)):
         self.img_paths = img_paths
         self.transform = Compose([
+            CenterCrop((320, 256)),
             Resize(resize, Image.BILINEAR),
+            # ColorJitter(0.1, 0.1, 0.1, 0.1),
             ToTensor(),
             Normalize(mean=mean, std=std),
         ])

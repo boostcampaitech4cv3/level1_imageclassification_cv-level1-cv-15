@@ -13,15 +13,17 @@ import numpy as np
 import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
-from loss import FocalLoss
+from tqdm import tqdm
 
+import wandb
 from timm.scheduler.step_lr import StepLRScheduler
+from pytorchtools import EarlyStopping
 
 # from torch.utils.tensorboard import SummaryWriter 
 
 from dataset import MaskBaseDataset   # dataset class import
 from loss import create_criterion
-from model import BaseModel, ResNet34, ResNet152  # model.py에서 model class import
+from model import BaseModel, ResNet34, ResNet152, EfficientNetB0  # model.py에서 model class import
 
 def seed_everything(seed):
     torch.manual_seed(seed)
@@ -154,11 +156,11 @@ def train(data_dir, model_dir, args):
     optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.lr,
-        weight_decay=5e-4
+        weight_decay=1e-8
     )
 
 
-    #scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    # -- scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
     scheduler = StepLRScheduler(
         optimizer,
         decay_t=args.lr_decay_step,
@@ -167,18 +169,19 @@ def train(data_dir, model_dir, args):
         warmup_t=5,
         t_in_epochs=False,
     )
+
     # -- Tensorboard logging
     # logger = SummaryWriter(log_dir=save_dir)
 
+    # -- early stopping
+    early_stopping = EarlyStopping(patience=args.earlystop, delta=args.delta, path=f"{save_dir}/best.pth")
 
-    best_val_acc = 0
-    best_val_loss = np.inf
     for epoch in range(args.epochs):
         # train loop
         model.train()
         loss_value = 0
         matches = 0
-        for idx, train_batch in enumerate(train_loader):
+        for idx, train_batch in enumerate(tqdm(train_loader)):
             inputs, labels = train_batch
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -203,15 +206,22 @@ def train(data_dir, model_dir, args):
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
 
+
                 # Tensorboard
                 # logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
                 # logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
+                if args.wandb:
+                    wandb.log({'Train Epoch': epoch,
+                                'Total Loss': train_loss,
+                                'Learning_Rate': scheduler._get_lr(epoch)[0]})
 
                 loss_value = 0
                 matches = 0
 
         scheduler.step_update(epoch + 1)
-        if (epoch + 1) % args.validation_interval: # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
+        best_epoch = 0
+
+        if not (epoch + 1) % args.validation_interval: # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
         # val loop
             with torch.no_grad():
@@ -242,16 +252,30 @@ def train(data_dir, model_dir, args):
 
                 val_loss = np.sum(val_loss_items) / len(val_loader)
                 val_acc = np.sum(val_acc_items) / len(val_set)
-                best_val_loss = min(best_val_loss, val_loss)
+                # best_val_loss = min(best_val_loss, val_loss)
                 
-                if val_acc > best_val_acc:
-                    print(f"New best model for val accuracy in epoch {epoch}: {val_acc:4.2%}! saving the best model..")
-                    torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
-                    best_val_acc = val_acc
+                early_stopping(val_loss, val_acc, model)
+
+                if early_stopping.saved:
+                    best_epoch = epoch
+                
+                if early_stopping.early_stop:
+                    print()
+                    print("="*50)
+                    print("Early Stop")
+                    print(f"Current val loss value didn't improve for {args.earlystop} count")
+                    print(f"Stopped Epoch: {best_epoch}")
+                    
+                    break
+
+                # if val_acc > best_val_acc:
+                #     print(f"New best model for val accuracy in epoch {epoch}: {val_acc:4.2%}! saving the best model..")
+                #     torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
+                #     best_val_acc = val_acc
                 torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
                 print(
                     f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
-                    f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
+                    f"best acc : {early_stopping.val_acc_max:4.2%}, best loss: {early_stopping.val_loss_min:4.2}"
                 )
                 # Tensorboard
                 # logger.add_scalar("Val/loss", val_loss, epoch)
@@ -265,15 +289,19 @@ if __name__ == '__main__':
 
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
-    parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train (default: 10)')
+    parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 10)')
     parser.add_argument('--dataset', type=str, default='MaskSplitByProfileDataset', help='dataset augmentation type (default: MaskBaseDataset)')
-    parser.add_argument('--augmentation', type=str, default='BaseAugmentation', help='data augmentation type (default: BaseAugmentation)')
-    parser.add_argument("--resize", nargs="+", type=list, default=[128, 96], help='resize size for image when training')
-    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
+    parser.add_argument('--augmentation', type=str, default='CustomAugmentation', help='data augmentation type (default: BaseAugmentation)')
+    parser.add_argument("--resize", nargs="+", type=list, default=(224,224), help='resize size for image when training')
+    parser.add_argument('--batch_size', type=int, default=16, help='input batch size for training (default: 64)')
+
+    # Early Stopping
+    parser.add_argument('--delta', type=float, default=0.01, help='early stopping delta')
+    parser.add_argument('--earlystop', type=int, default=5, help='early stop patience')
     
     # Validation
-    parser.add_argument('--validation_interval',type=int,default=2, help="Validation interval in training process (default: 10)")
-    parser.add_argument('--valid_batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
+    parser.add_argument('--validation_interval',type=int,default=1, help="Validation interval in training process (default: 10)")
+    parser.add_argument('--valid_batch_size', type=int, default=64, help='input batch size for validing (default: 1000)')
     
     '''
     Models
@@ -284,13 +312,14 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='EfficientNetB0', help='model type (default: BaseModel)')
     
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer type (default: SGD)')
-    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
+    parser.add_argument('--lr', type=float, default=2e-5, help='learning rate (default: 1e-3)')
     parser.add_argument('--val_ratio', type=float, default=0.2, help='ratio for validaton (default: 0.2)')
     parser.add_argument('--criterion', type=str, default='cross_entropy', help='criterion type (default: cross_entropy)')
-    parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
-    parser.add_argument('--log_interval', type=int, default=20, help='how many batches to wait before logging training status')
+    parser.add_argument('--lr_decay_step', type=int, default=4, help='learning rate scheduler deacy step (default: 20)')
+    parser.add_argument('--log_interval', type=int, default=16, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
-
+    parser.add_argument('--wandb', type=bool, default='True', help='Using Wandb')
+    
     # Container environment
     parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', '/opt/ml/input/data/train/images'))
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', './model'))
@@ -300,5 +329,7 @@ if __name__ == '__main__':
 
     data_dir = args.data_dir
     model_dir = args.model_dir
+
+    wandb.init(project='cv_maskclassification')
 
     train(data_dir, model_dir, args)
