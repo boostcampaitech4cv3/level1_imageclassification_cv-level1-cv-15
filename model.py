@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 import timm
-from efficientnet_pytorch import EfficientNet
+from efficientnet_pytorch import EfficientNet as EffNet
 
 class BaseModel(nn.Module):
     def __init__(self, num_classes):
@@ -89,6 +89,21 @@ class ResNet152(nn.Module):
         x = self.model(x)
         return x
 
+class ResNet50(nn.Module):
+    def __init__(self, num_classes = 18):
+        super().__init__()
+
+        self.model = torchvision.models.resnet50(pretrained=True)
+        self.model.fc = nn.Identity()
+        self.classifier = nn.Linear(in_features = 2048, out_features = num_classes, bias = True)
+        self.classifier.apply(weights_init_classifier)
+        
+    def forward(self, x):
+        feat = self.model(x)
+        cls_score = self.classifier(feat)
+        return feat,cls_score
+
+
 class EfficientNet_b7(nn.Module):
     def __init__(self, num_classes = 18):
         super().__init__()
@@ -107,25 +122,34 @@ class EfficientNet_b7(nn.Module):
         return feat, cls_score
 
 class EfficientNet_b0(nn.Module):
-    def __init__(self,num_classes = 18):
+    def __init__(
+        self,
+        num_classes,
+        pretrained = True,
+    ):
         super().__init__()
 
-        self.model = EfficientNet.from_pretrained('efficientnet-b0',num_classes = 18)
+        if pretrained:
+            self.model = EffNet.from_pretrained("efficientnet-b0")
+        else:
+            self.model = EffNet.from_name("efficientnet-b0")
 
-        self.model._fc = nn.Identity()
-        self.classifier = nn.Linear(in_features = 1280, out_features = num_classes, bias = True)
-        # nn.init.xavier_uniform(self.classifier.weight)
+        self.fc = nn.Linear(1000, num_classes)
 
-        self.classifier.apply(weights_init_classifier)
-        # self.classifier.apply(weights_init_kaiming)
+
     def forward(self, x):
+        """
+        1. 위에서 정의한 모델 아키텍쳐를 forward propagation 을 진행해주세요
+        2. 결과로 나온 output 을 return 해주세요
+        """
+        # x shape: batch_size, 3, 128, 96
 
-        feat = self.model(x)
-        
-        cls_score = self.classifier(feat)
+        x = self.model(x)
+        # x shape: batch_size, 1000
 
-        return feat, cls_score
-    
+        x = self.fc(x)
+        # x shape: batch_size, num_classes
+        return x
 
 class EfficientNet_b4(nn.Module):
     def __init__(self,num_classes = 18):

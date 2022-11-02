@@ -9,17 +9,18 @@ random_erase : False
 # Model Hyperparams
 
 seed : 42
-epochs : 50
+epochs : 60
 dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
 augmentation : 'CustomAugmentation'
 cropsize : [320,256]
 resize : [224,224]
 batch_size : 32
-model : "EfficientNet_b0" 
+model : "ResNet50" 
 
 # Optimizer
 
 optimizer : 'Adam'
+scheduler : 'cos'
 base_lr : 0.0001
 weight_decay : 1e-4
 weight_decay_bias : 1e-4
@@ -34,7 +35,7 @@ val_ratio : 0.2
 criterion : 'cross_entropy'
 lr_decay_step : 20
 log_interval : 20
-name : 'exp17'
+name : 'exp13'
 
 # Validation
 
@@ -50,9 +51,9 @@ oversample_id : [2, 5, 8, 11, 14, 17]
 
 # Loss
 
-sampler : 'softmax' # f1_triplet, softmax_triplet
+sampler : 'f1_triplet' # f1_triplet, softmax_triplet
 num_instance : 4
-loss_type : 'f1' # attention_triplet, triplet
+loss_type : 'triplet' # attention_triplet, triplet
 feat_norm : False
 ID_loss_weight : 0.5
 triplet_loss_weight : 0.5
@@ -63,7 +64,7 @@ margin : 0.7
 
 test_data_dir : '/opt/ml/input/data/eval'
 test_batch_size : 64
-test_model : 'exp16'
+test_model : 'exp10'
 
 # WANDB
  
@@ -72,6 +73,6 @@ wandb : False
 # Container environment
 
 data_dir : '/opt/ml/input/data/train/images'
-model_dir : './model_output/EfficientNet_b0'
+model_dir : './model_output/ResNet50'
 output_dir : './inference_output'
 

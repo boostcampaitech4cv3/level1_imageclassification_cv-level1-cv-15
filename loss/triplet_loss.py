@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from typing import Optional, Tuple
 
 
 def normalize(x, axis=-1):
@@ -201,3 +202,86 @@ class TripletLoss(object):
         else:
             loss = self.ranking_loss(dist_an - dist_ap, y)
         return loss, dist_ap, dist_an
+
+class TripletAttentionLoss(object):
+    """Modified from Tong Xiao's open-reid (https://github.com/Cysu/open-reid).
+    Related Triplet Loss theory can be found in paper 'In Defense of the Triplet
+    Loss for Person Re-Identification'."""
+
+    def __init__(self, margin: Optional[float] = None):
+        self.margin = margin
+        self.attn_loss = nn.MSELoss()
+        if margin is not None:
+            self.ranking_loss = nn.MarginRankingLoss(margin=margin)
+        else:
+            self.ranking_loss = nn.SoftMarginLoss()
+        self.weight_param = nn.Parameter(
+            torch.ones(1, dtype=torch.float, requires_grad=True).cuda()
+        )
+
+    def __call__(
+        self,
+        global_feat: torch.Tensor,
+        labels: torch.Tensor,
+        cls_param: torch.Tensor,
+        normalize_feature: bool = False,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        dist_mat = euclidean_dist(global_feat, global_feat)
+
+        #dist_mat = cosine_distance(global_feat,global_feat)
+        (
+            dist_ap,
+            dist_an,
+            dist_an_mean,
+            ind_pos,
+            ind_neg,
+        ) = hard_example_mining_with_inds(dist_mat, labels)
+        neg_weight = self.weight(ind_neg, cls_param.detach(), labels) # weight abs차의 normalize 값이 threshold 보다 작으면 0 
+        # neg_weight --> [64,2048]
+        # global_feat --> [64,2048] 
+        # Euclidean distance between Weighted feature of Anchor & negative, positive
+        dist_neg = torch.sum(
+            (global_feat * neg_weight - global_feat[ind_neg] * neg_weight).pow(2), dim=1
+        ).sqrt()
+        dist_pos = torch.sum(
+            (global_feat * neg_weight - global_feat[ind_pos] * neg_weight).pow(2), dim=1
+        ).sqrt()
+        y = dist_an.new().resize_as_(dist_an).fill_(1)
+
+        if self.margin is not None:
+            Triplet_loss = (
+                self.ranking_loss(dist_an.detach(), dist_ap, y) # requires_grad = false
+                + self.ranking_loss(dist_an_mean, dist_ap.detach(), y)
+                + self.ranking_loss(dist_neg, dist_pos, y)
+            )  # NEWTH
+            # loss = self.ranking_loss(dist_an.detach(), dist_ap, y) + self.ranking_loss(
+            #     dist_neg, dist_pos, y
+            # )  # EWTH
+            # loss = self.ranking_loss(dist_an.detach(), dist_ap, y) + self.ranking_loss(
+            #     dist_an_mean, dist_ap.detach(), y
+            # )  # HNTH
+            # loss = self.ranking_loss(dist_an.detach(), dist_ap, y) # HTH
+            # loss = self.ranking_loss(dist_an, dist_ap, y) # TH
+        else:
+            Triplet_loss = (
+                self.ranking_loss(dist_an.detach() - dist_ap, y)
+                + self.ranking_loss(dist_neg - dist_pos, y)
+                + self.ranking_loss(dist_an_mean, dist_ap.detach(), y)
+            )
+
+        return Triplet_loss,dist_ap,dist_an
+
+    def weight(
+        self, ind_neg: torch.Tensor, param: torch.Tensor, target: torch.Tensor
+    ) -> torch.Tensor:
+        t = 0.1
+        weight_neg1 = param[target] # 각 sample ID의 weight vector
+        weight_neg2 = param[target[ind_neg]] # 각 sample ID와 가장 먼 sample ID의 weight vector
+        weight_neg = torch.abs(weight_neg1 - weight_neg2) # 둘의 차이, [64,2048]
+        max, _ = torch.max(weight_neg, dim=1, keepdim=True) # max : [64,1] , weight_neg 각 행에서 가장 큰 값
+        weight_neg = weight_neg / (max + 1e-12) # 큰값으로 normalize
+        weight_neg[weight_neg < t] = -self.weight_param 
+        weight_neg = weight_neg + self.weight_param # normalize 후 0.1 보다 작은 값은 0으로
+
+        return weight_neg

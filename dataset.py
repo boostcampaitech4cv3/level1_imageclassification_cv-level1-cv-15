@@ -11,6 +11,9 @@ from torch.utils.data import Dataset, Subset, random_split
 from torchvision.transforms import Resize, ToTensor, Normalize, Compose, CenterCrop, ColorJitter
 from timm.data.random_erasing import RandomErasing
 from config.defaults import _C as cfg
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
+import cv2
 
 IMG_EXTENSIONS = [
     ".jpg", ".JPG", ".jpeg", ".JPEG", ".png",
@@ -52,28 +55,21 @@ class AddGaussianNoise(object):
 
 
 class CustomAugmentation:
-    def __init__(self, resize, cropsize, mean, std, **args):
-        if cfg.random_erase : 
-            self.transform = Compose([
-                CenterCrop((cropsize[0],cropsize[1])),
-                Resize(resize, Image.BILINEAR),
-                ColorJitter(0.1, 0.1, 0.1, 0.1),
-                ToTensor(),
-                Normalize(mean=mean, std=std),
-                RandomErasing(probability=0.5, mode='pixel', max_count=1, device='cpu'),
-                # AddGaussianNoise()
-            ])
-        else:
-            self.transform = Compose([
-                CenterCrop((cropsize[0],cropsize[1])),
-                Resize(resize, Image.BILINEAR),
-                ColorJitter(0.1, 0.1, 0.1, 0.1),
-                ToTensor(),
-                Normalize(mean=mean, std=std),
-                # AddGaussianNoise()
-            ])
+    def __init__(self, resize, mean, std, **args):
+        self.transform = A.Compose([
+            A.HorizontalFlip(),
+            A.CenterCrop(320, 256),
+            A.Resize(224,224),
+            A.ColorJitter(0.1, 0.1, 0.1, 0.1),
+            #A.CLAHE(always_apply=False, p=0.5, clip_limit=(1, 15), tile_grid_size=(8, 8)),
+            A.Equalize(always_apply=False, p=0.5, mode='cv', by_channels=False),
+            A.CoarseDropout(always_apply=False, p=0.5),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2(),
+        ])
+
     def __call__(self, image):
-        return self.transform(image)
+        return self.transform(image=image)['image']
 
 
 class MaskLabels(int, Enum):
@@ -214,7 +210,9 @@ class MaskBaseDataset(Dataset):
 
     def read_image(self, index):
         image_path = self.image_paths[index]
-        return Image.open(image_path)
+        image=cv2.imread(image_path)
+        image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+        return image
 
     @staticmethod
     def encode_multi_class(mask_label, gender_label, age_label) -> int:
@@ -317,17 +315,25 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
 class TestDataset(Dataset):
     def __init__(self, img_paths, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
         self.img_paths = img_paths
-        self.transform = Compose([
-            Resize(resize, Image.BILINEAR),
-            ToTensor(),
-            Normalize(mean=mean, std=std),
+        self.transform = A.Compose([
+            #A.HorizontalFlip(),
+            A.CenterCrop(320, 256),
+            A.Resize(224,224),
+            #A.ColorJitter(0.1, 0.1, 0.1, 0.1),
+            #A.CLAHE(always_apply=False, p=0.5, clip_limit=(1, 15), tile_grid_size=(8, 8)),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2(),
         ])
 
+    def __call__(self, image):
+        return self.transform(image=image)['image']
+
     def __getitem__(self, index):
-        image = Image.open(self.img_paths[index])
+        image = cv2.imread(self.img_paths[index])
+        image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
 
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image=image)['image']
         return image
 
     def __len__(self):

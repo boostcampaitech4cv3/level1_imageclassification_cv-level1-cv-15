@@ -10,36 +10,37 @@ Class Info
 Class |  Mask      | Gender   | Age             | Sample cnt
 0     |  Wear      | Male     | <30             | 2315
 1     |  Wear      | Male     | >=30 and < 60   | 1700
-2     |  Wear      | Male     | >= 60           | 275
+2     |  Wear      | Male     | >= 60           | 275       v
 3     |  Wear      | Female   | <30             | 3015
 4     |  Wear      | Female   | >=30 and < 60   | 3365
-5     |  Wear      | Female   | >= 60           | 390
+5     |  Wear      | Female   | >= 60           | 390       v
 6     |  Incorrect | Male     | <30             | 463
 7     |  Incorrect | Male     | >=30 and < 60   | 340
-8     |  Incorrect | Male     | >= 60           | 55
+8     |  Incorrect | Male     | >= 60           | 55       v
 9     |  Incorrect | Female   | <30             | 603
 10    |  Incorrect | Female   | >=30 and < 60   | 673
-11    |  Incorrect | Female   | >= 60           | 78
+11    |  Incorrect | Female   | >= 60           | 78       v
 12    |  Not wear  | Male     | <30             | 463
-13    |  Not wear  | Male     | >= 30 and < 60  | 340
-14    |  Not wear  | Male     | >= 60           | 755
+13    |  Not wear  | Male     | >= 30 and < 60  | 340   
+14    |  Not wear  | Male     | >= 60           | 755       v
 15    |  Not wear  | Female   | <30             | 603 
 16    |  Not wear  | Female   | >=30 and < 60   | 673
-17    |  Not wear  | Female   | >= 60           | 18
+17    |  Not wear  | Female   | >= 60           | 18       v
 
 '''
 
-def SampleWeighting(batch_idxs_dict,under_id,under_rate,over_id,over_rate):
+
+# def SampleWeighting(batch_idxs_dict,under_id,under_rate,over_id,over_rate):
     
-    # Undersample
-    for id in under_id:
-        batch_length = len(batch_idxs_dict[id])
-        batch_idxs_dict[id] =  batch_idxs_dict[id][: batch_length // under_rate]
-    # Oversample
-    # for id in over_id:
-    #     batch_idxs_dict[id] = over_rate * batch_idxs_dict[id]
+#     # Undersample
+#     for id in under_id:
+#         batch_length = len(batch_idxs_dict[id])
+#         batch_idxs_dict[id] =  batch_idxs_dict[id][: batch_length // under_rate]
+#     # Oversample
+#     # for id in over_id:
+#     #     batch_idxs_dict[id] = over_rate * batch_idxs_dict[id]
     
-    return batch_idxs_dict
+#     return batch_idxs_dict
 
 class RandomIdentitySampler(Sampler):  # For Single GPU training
     """
@@ -96,17 +97,23 @@ class RandomIdentitySampler(Sampler):  # For Single GPU training
         batch_idxs_len = list(map(lambda x : len(x[1]),batch_idxs_dict.items()))
         
         # Over,Undersampling
-        batch_idxs_dict = SampleWeighting(batch_idxs_dict,self.undersample_id,self.undersample_rate,self.oversample_id,self.oversample_rate)
+        # batch_idxs_dict = SampleWeighting(batch_idxs_dict,self.undersample_id,self.undersample_rate,self.oversample_id,self.oversample_rate)
         
         batch_idxs_len_sampled = list(map(lambda x : len(x[1]),batch_idxs_dict.items()))
 
         avai_pids = copy.deepcopy(self.pids) # pids
+        
         final_idxs = []
         cnt = 0
         while len(avai_pids) >= self.num_pids_per_batch + len(self.oversample_id): # self.num_instances = 4, self.num_pids_per_batch = 16
             selected_pids = random.sample(avai_pids, self.num_pids_per_batch)
+            
+            # if len(set(selected_pids) & set(self.oversample_id)) != 2:
+            #     continue
+            
             cnt +=1
             # print(f"{cnt}th ID batch : {selected_pids}")
+
             for pid in selected_pids: # selected_pids : random으로 뽑힌 self.num_pids_per_batch만큼의 pid
                 if pid in self.oversample_id:
                     temp = batch_idxs_dict[pid].pop(0)

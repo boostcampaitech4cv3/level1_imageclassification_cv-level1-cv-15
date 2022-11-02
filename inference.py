@@ -58,7 +58,7 @@ def inference(data_dir, model_dir, output_dir, args):
     with torch.no_grad():
         for idx, images in enumerate(tqdm(loader)):
             images = images.to(device)
-            pred = model(images)[1]
+            pred = model(images)
             pred = pred.argmax(dim=-1)
             preds.extend(pred.cpu().numpy())
 
