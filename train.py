@@ -7,7 +7,9 @@ import random
 import re
 from importlib import import_module
 from pathlib import Path
+import wandb
 
+from timm.scheduler.step_lr import StepLRScheduler
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -88,7 +90,6 @@ def increment_path(path, exist_ok=False):
 
 def train(data_dir, model_dir, args):
     seed_everything(args.seed)
-
     # model 이란 폴더 안에서 하위폴더의 path index를 매 experiment마다 늘려줌
     save_dir = increment_path(os.path.join(model_dir, args.name))
 
@@ -142,7 +143,7 @@ def train(data_dir, model_dir, args):
     )
 
     # -- model
-    model_module = getattr(import_module("model"), "EfficientNet_b7")  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
+    model_module = getattr(import_module("model"), args.model)  # default: BaseModel, ResNet34, ResNet152, EfficientNet_b7
     model = model_module(
         num_classes=num_classes
     ).to(device)
@@ -157,7 +158,15 @@ def train(data_dir, model_dir, args):
         lr=args.lr,
         weight_decay=5e-4
     )
-    scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    # scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)\
+    scheduler = StepLRScheduler(
+            optimizer,
+            decay_t=args.lr_decay_step,
+            decay_rate=0.5,
+            warmup_lr_init=2e-08,
+            warmup_t=5,
+            t_in_epochs=False,
+        )   
 
     # -- Tensorboard logging
     # logger = SummaryWriter(log_dir=save_dir)
@@ -198,9 +207,14 @@ def train(data_dir, model_dir, args):
                 # logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
                 # logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
                 loss_value = 0
-                matches = 0
+                matches = 0                 
+                if cfg.wandb:
+                    wandb.log({ 'Train Epoch': epoch, 
+                                'Total Loss' : train_loss, 
+                                'Learning rate': scheduler._get_lr(epoch)[0],
+                                'Train Acc': train_acc})
 
-        scheduler.step()
+        scheduler.step_update(epoch+1)
         if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
         # val loop
@@ -243,10 +257,9 @@ def train(data_dir, model_dir, args):
                     f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                     f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
                 )
-                # Tensorboard
-                # logger.add_scalar("Val/loss", val_loss, epoch)
-                # logger.add_scalar("Val/accuracy", val_acc, epoch)
-                # logger.add_figure("results", figure, epoch)
+                
+                if cfg.wandb : 
+                    wandb.log({'Val Epoch': epoch, 'Val loss' : val_loss, 'Val Acc' : val_acc})
 
 
 if __name__ == '__main__':
@@ -261,6 +274,8 @@ if __name__ == '__main__':
 
     data_dir = cfg.data_dir
     model_dir = cfg.model_dir
-    
+
+    if cfg.wandb:
+        wandb.init(project="CV_competition",config=cfg)
 
     train(data_dir, model_dir, cfg)

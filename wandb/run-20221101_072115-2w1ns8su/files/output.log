@@ -1,0 +1,32 @@
+Traceback (most recent call last):
+  File "/opt/conda/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/opt/conda/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/opt/ml/level1_imageclassification_cv-level1-cv-15/train.py", line 271, in <module>
+    if cfg.wandb:
+  File "/opt/conda/lib/python3.8/site-packages/yacs/config.py", line 141, in __getattr__
+    raise AttributeError(name)
+AttributeError: wandb
+augmentation: CustomAugmentation
+batch_size: 16
+criterion: f1
+data_dir: /opt/ml/input/data/train/images
+dataset: MaskSplitByProfileDataset
+epochs: 10
+log_interval: 20
+lr: 2e-05
+lr_decay_step: 20
+model: EfficientNet_b0
+model_dir: ./model/EfficientNet_b0
+name: exp6
+optimizer: Adam
+output_dir: ./inferenceoutput
+resize: [256, 192]
+seed: 42
+test_batch_size: 64
+test_data_dir: /opt/ml/input/data/eval
+test_model: exp6
+val_ratio: 0.2
+valid_batch_size: 64
+validation_interval: 1

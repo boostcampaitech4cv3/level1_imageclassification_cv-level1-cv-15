@@ -1,0 +1,37 @@
+augmentation: CustomAugmentation
+batch_size: 16
+criterion: f1
+data_dir: /opt/ml/input/data/train/images
+dataset: MaskSplitByProfileDataset
+epochs: 10
+log_interval: 20
+lr: 2e-05
+lr_decay_step: 20
+model: EfficientNet_b0
+model_dir: ./model/EfficientNet_b0
+name: exp6
+optimizer: Adam
+output_dir: ./inferenceoutput
+resize: [256, 192]
+seed: 42
+test_batch_size: 64
+test_data_dir: /opt/ml/input/data/eval
+test_model: exp6
+val_ratio: 0.2
+valid_batch_size: 64
+validation_interval: 1
+wandb: True
+Loaded pretrained weights for efficientnet-b0
+/opt/ml/level1_imageclassification_cv-level1-cv-15/model.py:108: UserWarning: nn.init.xavier_uniform is now deprecated in favor of nn.init.xavier_uniform_.
+  nn.init.xavier_uniform(self.model.fc.weight)
+Epoch[0/10](20/967) || training loss 0.9667 || training accuracy 8.12% || lr 2e-05
+Traceback (most recent call last):
+  File "/opt/conda/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/opt/conda/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/opt/ml/level1_imageclassification_cv-level1-cv-15/train.py", line 274, in <module>
+    train(data_dir, model_dir, cfg)
+  File "/opt/ml/level1_imageclassification_cv-level1-cv-15/train.py", line 207, in train
+    'Learning rate': scheduler._get_lr(epoch)[0],
+AttributeError: 'StepLR' object has no attribute '_get_lr'

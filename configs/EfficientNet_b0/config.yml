@@ -6,7 +6,7 @@ dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
 augmentation : 'CustomAugmentation'
 resize : [256,192]
 batch_size : 16
-model : "EfficientNet_b7" 
+model : "EfficientNet_b0" 
 
 # Training
 
@@ -16,7 +16,7 @@ val_ratio : 0.2
 criterion : 'f1'
 lr_decay_step : 20
 log_interval : 20
-name : 'exp'
+name : 'exp69'
 
 # Validation
 
@@ -26,9 +26,13 @@ valid_batch_size : 64
 # Test
 test_data_dir : '/opt/ml/input/data/eval'
 test_batch_size : 64
-test_model : 'exp6'
+test_model : 'exp69'
+
+# WANDB
+ 
+wandb : True
 # Container environment
 
 data_dir : '/opt/ml/input/data/train/images'
-model_dir : './model/EfficientNet_b7'
-output_dir : './output'
+model_dir : './model/EfficientNet_b0'
+output_dir : './inferenceoutput'

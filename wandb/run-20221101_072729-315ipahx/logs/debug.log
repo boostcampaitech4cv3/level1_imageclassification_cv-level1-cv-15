@@ -1,0 +1,13 @@
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_setup.py:_flush():68] Configure stats pid to 30063
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_setup.py:_flush():68] Loading settings from /opt/ml/.config/wandb/settings
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_setup.py:_flush():68] Loading settings from /opt/ml/level1_imageclassification_cv-level1-cv-15/wandb/settings
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_setup.py:_flush():68] Loading settings from environment variables: {'_require_service': 'True'}
+2022-11-01 07:27:29,845 WARNING MainThread:30063 [wandb_setup.py:_flush():68] Could not find program at -m train
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_setup.py:_flush():68] Inferring run settings from compute environment: {'program_relpath': None, 'program': '-m train'}
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_init.py:_log_setup():476] Logging user logs to /opt/ml/level1_imageclassification_cv-level1-cv-15/wandb/run-20221101_072729-315ipahx/logs/debug.log
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_init.py:_log_setup():477] Logging internal logs to /opt/ml/level1_imageclassification_cv-level1-cv-15/wandb/run-20221101_072729-315ipahx/logs/debug-internal.log
+2022-11-01 07:27:29,845 INFO    MainThread:30063 [wandb_init.py:init():516] calling init triggers
+2022-11-01 07:27:29,846 INFO    MainThread:30063 [wandb_init.py:init():519] wandb.init called with sweep_config: {}
+config: {'seed': 42, 'epochs': 10, 'dataset': 'MaskSplitByProfileDataset', 'augmentation': 'CustomAugmentation', 'resize': [256, 192], 'batch_size': 16, 'model': 'EfficientNet_b0', 'optimizer': 'Adam', 'lr': 2e-05, 'val_ratio': 0.2, 'criterion': 'f1', 'lr_decay_step': 20, 'log_interval': 20, 'name': 'exp6', 'validation_interval': 1, 'valid_batch_size': 64, 'test_data_dir': '/opt/ml/input/data/eval', 'test_batch_size': 64, 'test_model': 'exp6', 'wandb': True, 'data_dir': '/opt/ml/input/data/train/images', 'model_dir': './model/EfficientNet_b0', 'output_dir': './inferenceoutput'}
+2022-11-01 07:27:29,846 INFO    MainThread:30063 [wandb_init.py:init():564] wandb.init() called when a run is still active
+2022-11-01 07:27:41,640 WARNING MsgRouterThr:30063 [router.py:message_loop():77] message_loop has been closed

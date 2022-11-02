@@ -1,0 +1,62 @@
+
+Loaded pretrained weights for efficientnet-b0
+/opt/ml/level1_imageclassification_cv-level1-cv-15/model.py:108: UserWarning: nn.init.xavier_uniform is now deprecated in favor of nn.init.xavier_uniform_.
+  nn.init.xavier_uniform(self.model.fc.weight)
+Epoch[0/10](20/967) || training loss 0.9672 || training accuracy 6.56% || lr 2e-08
+Epoch[0/10](40/967) || training loss 0.9681 || training accuracy 8.12% || lr 2e-08
+Epoch[0/10](60/967) || training loss 0.9672 || training accuracy 3.44% || lr 2e-08
+Epoch[0/10](80/967) || training loss 0.9691 || training accuracy 6.25% || lr 2e-08
+Epoch[0/10](100/967) || training loss 0.9682 || training accuracy 5.00% || lr 2e-08
+Epoch[0/10](120/967) || training loss 0.9685 || training accuracy 5.31% || lr 2e-08
+Epoch[0/10](140/967) || training loss 0.9679 || training accuracy 7.50% || lr 2e-08
+Epoch[0/10](160/967) || training loss 0.9681 || training accuracy 5.94% || lr 2e-08
+Epoch[0/10](180/967) || training loss 0.9678 || training accuracy 6.88% || lr 2e-08
+Epoch[0/10](200/967) || training loss 0.9677 || training accuracy 8.75% || lr 2e-08
+Epoch[0/10](220/967) || training loss 0.968 || training accuracy 7.19% || lr 2e-08
+Epoch[0/10](240/967) || training loss 0.9694 || training accuracy 7.19% || lr 2e-08
+Epoch[0/10](260/967) || training loss 0.9676 || training accuracy 5.31% || lr 2e-08
+Epoch[0/10](280/967) || training loss 0.9678 || training accuracy 7.50% || lr 2e-08
+Epoch[0/10](300/967) || training loss 0.9707 || training accuracy 6.56% || lr 2e-08
+Epoch[0/10](320/967) || training loss 0.9675 || training accuracy 4.69% || lr 2e-08
+Epoch[0/10](340/967) || training loss 0.97 || training accuracy 6.88% || lr 2e-08
+Epoch[0/10](360/967) || training loss 0.9685 || training accuracy 5.62% || lr 2e-08
+Epoch[0/10](380/967) || training loss 0.9675 || training accuracy 5.00% || lr 2e-08
+Epoch[0/10](400/967) || training loss 0.9678 || training accuracy 5.31% || lr 2e-08
+Epoch[0/10](420/967) || training loss 0.9682 || training accuracy 5.62% || lr 2e-08
+Epoch[0/10](440/967) || training loss 0.9687 || training accuracy 3.12% || lr 2e-08
+Epoch[0/10](460/967) || training loss 0.9677 || training accuracy 4.06% || lr 2e-08
+Epoch[0/10](480/967) || training loss 0.969 || training accuracy 5.94% || lr 2e-08
+Epoch[0/10](500/967) || training loss 0.9691 || training accuracy 5.31% || lr 2e-08
+Epoch[0/10](520/967) || training loss 0.9693 || training accuracy 6.25% || lr 2e-08
+Epoch[0/10](540/967) || training loss 0.9695 || training accuracy 5.00% || lr 2e-08
+Epoch[0/10](560/967) || training loss 0.9688 || training accuracy 5.62% || lr 2e-08
+Epoch[0/10](580/967) || training loss 0.9682 || training accuracy 6.56% || lr 2e-08
+Epoch[0/10](600/967) || training loss 0.9688 || training accuracy 3.12% || lr 2e-08
+Epoch[0/10](620/967) || training loss 0.9695 || training accuracy 4.06% || lr 2e-08
+Epoch[0/10](640/967) || training loss 0.9688 || training accuracy 4.38% || lr 2e-08
+Epoch[0/10](660/967) || training loss 0.969 || training accuracy 4.06% || lr 2e-08
+Epoch[0/10](680/967) || training loss 0.9675 || training accuracy 5.94% || lr 2e-08
+Epoch[0/10](700/967) || training loss 0.9686 || training accuracy 5.62% || lr 2e-08
+Epoch[0/10](720/967) || training loss 0.9688 || training accuracy 7.81% || lr 2e-08
+Epoch[0/10](740/967) || training loss 0.9694 || training accuracy 5.94% || lr 2e-08
+Epoch[0/10](760/967) || training loss 0.968 || training accuracy 5.31% || lr 2e-08
+Epoch[0/10](780/967) || training loss 0.9692 || training accuracy 4.38% || lr 2e-08
+Epoch[0/10](800/967) || training loss 0.9696 || training accuracy 5.00% || lr 2e-08
+Epoch[0/10](820/967) || training loss 0.9693 || training accuracy 6.25% || lr 2e-08
+Epoch[0/10](840/967) || training loss 0.9669 || training accuracy 4.06% || lr 2e-08
+Epoch[0/10](860/967) || training loss 0.9675 || training accuracy 2.81% || lr 2e-08
+Epoch[0/10](880/967) || training loss 0.97 || training accuracy 5.94% || lr 2e-08
+Epoch[0/10](900/967) || training loss 0.9678 || training accuracy 4.69% || lr 2e-08
+Epoch[0/10](920/967) || training loss 0.9672 || training accuracy 4.06% || lr 2e-08
+Epoch[0/10](940/967) || training loss 0.9681 || training accuracy 5.62% || lr 2e-08
+Epoch[0/10](960/967) || training loss 0.9698 || training accuracy 6.88% || lr 2e-08
+Traceback (most recent call last):
+  File "/opt/conda/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/opt/conda/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/opt/ml/level1_imageclassification_cv-level1-cv-15/train.py", line 281, in <module>
+    train(data_dir, model_dir, cfg)
+  File "/opt/ml/level1_imageclassification_cv-level1-cv-15/train.py", line 217, in train
+    scheduler.step()
+TypeError: step() missing 1 required positional argument: 'epoch'

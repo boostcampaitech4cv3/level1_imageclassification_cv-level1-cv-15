@@ -1,0 +1,27 @@
+2022-11-01 06:55:38,881 INFO    MainThread:26001 [wandb_setup.py:_flush():68] Configure stats pid to 26001
+2022-11-01 06:55:38,881 INFO    MainThread:26001 [wandb_setup.py:_flush():68] Loading settings from /opt/ml/.config/wandb/settings
+2022-11-01 06:55:38,881 INFO    MainThread:26001 [wandb_setup.py:_flush():68] Loading settings from /opt/ml/level1_imageclassification_cv-level1-cv-15/wandb/settings
+2022-11-01 06:55:38,881 INFO    MainThread:26001 [wandb_setup.py:_flush():68] Loading settings from environment variables: {'_require_service': 'True'}
+2022-11-01 06:55:38,881 WARNING MainThread:26001 [wandb_setup.py:_flush():68] Could not find program at -m train
+2022-11-01 06:55:38,881 INFO    MainThread:26001 [wandb_setup.py:_flush():68] Inferring run settings from compute environment: {'program_relpath': None, 'program': '-m train'}
+2022-11-01 06:55:38,881 INFO    MainThread:26001 [wandb_init.py:_log_setup():476] Logging user logs to /opt/ml/level1_imageclassification_cv-level1-cv-15/wandb/run-20221101_065538-131i3gw4/logs/debug.log
+2022-11-01 06:55:38,882 INFO    MainThread:26001 [wandb_init.py:_log_setup():477] Logging internal logs to /opt/ml/level1_imageclassification_cv-level1-cv-15/wandb/run-20221101_065538-131i3gw4/logs/debug-internal.log
+2022-11-01 06:55:38,882 INFO    MainThread:26001 [wandb_init.py:init():516] calling init triggers
+2022-11-01 06:55:38,882 INFO    MainThread:26001 [wandb_init.py:init():519] wandb.init called with sweep_config: {}
+config: {'seed': 42, 'epochs': 10, 'dataset': 'MaskSplitByProfileDataset', 'augmentation': 'CustomAugmentation', 'resize': [256, 192], 'batch_size': 16, 'model': 'EfficientNet_b0', 'optimizer': 'Adam', 'lr': 2e-05, 'val_ratio': 0.2, 'criterion': 'f1', 'lr_decay_step': 20, 'log_interval': 20, 'name': 'exp6', 'validation_interval': 1, 'valid_batch_size': 64, 'test_data_dir': '/opt/ml/input/data/eval', 'test_batch_size': 64, 'test_model': 'exp6', 'wandb': True, 'data_dir': '/opt/ml/input/data/train/images', 'model_dir': './model/EfficientNet_b0', 'output_dir': './inferenceoutput'}
+2022-11-01 06:55:38,882 INFO    MainThread:26001 [wandb_init.py:init():569] starting backend
+2022-11-01 06:55:38,882 INFO    MainThread:26001 [wandb_init.py:init():573] setting up manager
+2022-11-01 06:55:38,886 INFO    MainThread:26001 [backend.py:_multiprocessing_setup():102] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2022-11-01 06:55:38,889 INFO    MainThread:26001 [wandb_init.py:init():580] backend started and connected
+2022-11-01 06:55:38,893 INFO    MainThread:26001 [wandb_init.py:init():658] updated telemetry
+2022-11-01 06:55:38,912 INFO    MainThread:26001 [wandb_init.py:init():693] communicating run to backend with 60 second timeout
+2022-11-01 06:55:41,946 WARNING MsgRouterThr:26001 [router.py:message_loop():77] message_loop has been closed
+2022-11-01 06:55:48,923 ERROR   MainThread:26001 [wandb_init.py:init():1105] error
+Traceback (most recent call last):
+  File "/opt/conda/lib/python3.8/site-packages/wandb/sdk/wandb_init.py", line 1078, in init
+    run = wi.init()
+  File "/opt/conda/lib/python3.8/site-packages/wandb/sdk/wandb_init.py", line 697, in init
+    result = handle.wait(
+  File "/opt/conda/lib/python3.8/site-packages/wandb/sdk/lib/mailbox.py", line 259, in wait
+    raise MailboxError("transport failed")
+wandb.errors.MailboxError: transport failed
