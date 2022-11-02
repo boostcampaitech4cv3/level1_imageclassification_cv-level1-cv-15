@@ -195,7 +195,7 @@ def train(data_dir, model_dir, args):
     #optimizer=AdamP(model.parameters(),lr=args.lr)
 
     #scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
-    
+    '''
     scheduler = StepLRScheduler(
             optimizer,
             decay_t=args.lr_decay_step,
@@ -204,6 +204,8 @@ def train(data_dir, model_dir, args):
             warmup_t=5,
             t_in_epochs=False,
         )
+    '''
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5,8,12,15], gamma=0.1)
     # -- Tensorboard logging
     # logger = SummaryWriter(log_dir=save_dir)
 
@@ -211,9 +213,10 @@ def train(data_dir, model_dir, args):
 
     best_val_acc = 0
     best_val_loss = np.inf
+    best_f1=0
 
     patience=0
-
+    scaler=torch.cuda.amp.GradScaler()
     for epoch in range(args.epochs):
         # train loop
         model.train()
@@ -240,8 +243,10 @@ def train(data_dir, model_dir, args):
                 loss=criterion(outs,labels)
             '''
             optimizer.zero_grad()
+
             outs=model(inputs)
             loss=criterion(outs,labels)
+
 
             loss.backward()
             if args.optimizer!='sam':
@@ -269,7 +274,7 @@ def train(data_dir, model_dir, args):
                 matches = 0
 
 
-        scheduler.step_update(epoch + 1)
+        scheduler.step()
         #if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
         # val loop
@@ -334,17 +339,20 @@ def train(data_dir, model_dir, args):
                 val_acc = np.sum(val_acc_items) / len(val_set)
                 best_val_loss = min(best_val_loss, val_loss)
                 
-                if val_acc > best_val_acc:
+                if val_f1 > best_f1:
                     print(f"New best model for val accuracy in epoch {epoch}: {val_acc:4.2%}! saving the best model..")
                     torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
                     best_val_acc = val_acc
+                    best_f1=val_f1
+                    patience=0
                 else:
                     patience+=1
                 torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
                 print(
                     f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                     f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} ||"
-                    f"f1_score: {val_f1:4.2%}"
+                    f"f1_score: {val_f1:4.2%} ||"
+                    f'best f1_score {best_f1:4.2%}'
                 )            
         
         if patience==5:

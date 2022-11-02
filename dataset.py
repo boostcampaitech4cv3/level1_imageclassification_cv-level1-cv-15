@@ -60,7 +60,7 @@ class CustomAugmentation:
         self.transform = A.Compose([
             A.HorizontalFlip(),
             A.CenterCrop(320, 256),
-            A.Resize(224,224),
+            A.Resize(380,380),
             A.ColorJitter(0.1, 0.1, 0.1, 0.1),
             #A.CLAHE(always_apply=False, p=0.5, clip_limit=(1, 15), tile_grid_size=(8, 8)),
             A.Equalize(always_apply=False, p=0.5, mode='cv', by_channels=False),
@@ -365,12 +365,16 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     
                     gender_label = GenderLabels.from_str(gender)
                     age_label = AgeLabels.from_number(age)
-                    #if phase=='train':                  
-                      #  if 57<=int(age)<60 and ('mask4' in _file_name or 'mask2' in _file_name or 'mask3' in _file_name):
+                    
+                    if phase=='train':                  
+                        if gender_label==1 and 56<=int(age)<=59 and ('mask4' in _file_name or  'mask1' in _file_name or 'mask5' in _file_name or 'mask2' in _file_name):
                             continue
-                        #if 50<=int(age)<55 and ('mask2' in _file_name or 'mask3' in _file_name):
-                         #   continue
-                        
+                        if gender_label==1 and 56<=int(age)<=59 and 'normal' in _file_name and random.random()>0.6:
+                            continue
+                        elif gender_label==1 and 56<=int(age)<=59 and 'incorrect' in _file_name and random.random()>0.6:
+                            continue
+
+
                     self.image_paths.append(img_path)
                     self.mask_labels.append(mask_label)
                     self.gender_labels.append(gender_label)
@@ -395,7 +399,7 @@ class TestDataset(Dataset):
         self.transform = A.Compose([
             #A.HorizontalFlip(),
             A.CenterCrop(320, 256),
-            A.Resize(224,224),
+            A.Resize(380,380),
             #A.ColorJitter(0.1, 0.1, 0.1, 0.1),
             #A.CLAHE(always_apply=False, p=0.5, clip_limit=(1, 15), tile_grid_size=(8, 8)),
             A.Normalize(mean=mean, std=std),
