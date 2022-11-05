@@ -1,0 +1,27 @@
+{
+    "os": "Linux-4.4.0-59-generic-x86_64-with-glibc2.10",
+    "python": "3.8.5",
+    "heartbeatAt": "2022-11-01T11:59:08.474890",
+    "startedAt": "2022-11-01T11:59:07.475021",
+    "docker": null,
+    "gpu": "Tesla V100-PCIE-32GB",
+    "gpu_count": 1,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": [
+        "--name",
+        "ce_centercrop256"
+    ],
+    "state": "running",
+    "program": "train.py",
+    "codePath": "train.py",
+    "git": {
+        "remote": "git@github.com:boostcampaitech4cv3/level1_imageclassification_cv-level1-cv-15.git",
+        "commit": "4487aaa4904f9ec2fd2449fec970d427f151cb72"
+    },
+    "email": "nicolasc0714@gmail.com",
+    "root": "/opt/ml/code/level1_imageclassification_cv-level1-cv-15",
+    "host": "ffa37fdcb5f0",
+    "username": "root",
+    "executable": "/opt/conda/bin/python"
+}

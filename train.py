@@ -122,6 +122,9 @@ def train(data_dir, model_dir, args):
     )
     dataset.set_transform(transform)
 
+    # -- SMOTE oversampling
+    
+
     # -- data_loader
     train_set, val_set = dataset.split_dataset() # dataset
 
@@ -331,5 +334,6 @@ if __name__ == '__main__':
     model_dir = args.model_dir
 
     wandb.init(project='cv_maskclassification')
+    wandb.run.name = f"{args.criterion}/{args.name}"
 
     train(data_dir, model_dir, args)

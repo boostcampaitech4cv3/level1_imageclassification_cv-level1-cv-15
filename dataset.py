@@ -171,6 +171,8 @@ class MaskBaseDataset(Dataset):
                 self.gender_labels.append(gender_label)
                 self.age_labels.append(age_label)
                 # 각 이미지에 대해 path, mask_label, gender_label, age_label을 순서대로 list에 stack
+
+                
     def calc_statistics(self):
         has_statistics = self.mean is not None and self.std is not None # 만약, mean std값을 지정안했다면 3000개의 dataset에 대한 mean, std값을 계산해서 적용
         if not has_statistics:
@@ -296,6 +298,10 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     gender_label = GenderLabels.from_str(gender)
                     age_label = AgeLabels.from_number(age)
 
+                    # if phase=='train':                  
+                    #     if gender_label==1 and 50<=int(age)<60 and ('mask4' in _file_name or  'mask1' in _file_name or 'mask5' in file_name):
+                    #         continue
+
                     self.image_paths.append(img_path)
                     self.mask_labels.append(mask_label)
                     self.gender_labels.append(gender_label)
@@ -303,6 +309,10 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
 
                     self.indices[phase].append(cnt)
                     cnt += 1
+
+    # def smote_oversampling(self):
+
+    
 
     def split_dataset(self) -> List[Subset]:
         train_set = Subset(self,self.indices['train'])
