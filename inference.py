@@ -8,20 +8,20 @@ import torch
 from torch.utils.data import DataLoader
 
 from dataset import TestDataset, MaskBaseDataset
-from config import cfg
-from tqdm import tqdm
+
 
 def load_model(saved_model, num_classes, device):
-    model_cls = getattr(import_module("model"), cfg.model)
+    model_cls = getattr(import_module("model"), args.model)
     model = model_cls(
-        num_classes=num_classes
+        num_classes=num_classes,
+        triplet=False
     )
 
     # tarpath = os.path.join(saved_model, 'best.tar.gz')
     # tar = tarfile.open(tarpath, 'r:gz')
     # tar.extractall(path=saved_model)
 
-    model_path = os.path.join(saved_model, cfg.test_model +'/'+'best.pth')
+    model_path = os.path.join(saved_model, 'best.pth')
     model.load_state_dict(torch.load(model_path, map_location=device))
 
     return model
@@ -44,10 +44,11 @@ def inference(data_dir, model_dir, output_dir, args):
 
     img_paths = [os.path.join(img_root, img_id) for img_id in info.ImageID]
     dataset = TestDataset(img_paths, args.resize)
+    print(use_cuda)
     loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=args.batch_size,
-        num_workers=multiprocessing.cpu_count() // 2,
+        num_workers=2,
         shuffle=False,
         pin_memory=use_cuda,
         drop_last=False,
@@ -56,11 +57,12 @@ def inference(data_dir, model_dir, output_dir, args):
     print("Calculating inference results..")
     preds = []
     with torch.no_grad():
-        for idx, images in enumerate(tqdm(loader)):
+        for idx, images in enumerate(loader):
             images = images.to(device)
             pred = model(images)
             pred = pred.argmax(dim=-1)
             preds.extend(pred.cpu().numpy())
+
 
     info['ans'] = preds
     save_path = os.path.join(output_dir, f'output.csv')
@@ -70,19 +72,23 @@ def inference(data_dir, model_dir, output_dir, args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_file",help="path to config file",type= str)
+
+    # Data and model checkpoints directories
+    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for validing (default: 1000)')
+    parser.add_argument('--resize', type=tuple, default=(380, 380), help='resize size for image when you trained (default: (96, 128))')
+    parser.add_argument('--model', type=str, default='EfficientNet_b0', help='model type (default: BaseModel)')
+
+    # Container environment
+    parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_EVAL', '/opt/ml/input/data/eval'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_CHANNEL_MODEL', 'model_output/EfficientNet_b0/exp176'))
+    parser.add_argument('--output_dir', type=str, default=os.environ.get('SM_OUTPUT_DATA_DIR', './inference_output/exp176'))
+
     args = parser.parse_args()
 
-    if args.config_file !="":
-        cfg.merge_from_file(args.config_file)
-    cfg.freeze()
-    print(cfg)
-    args = parser.parse_args()
-
-    data_dir = cfg.test_data_dir
-    model_dir = cfg.model_dir + "/"
-    output_dir = cfg.output_dir + "/" + cfg.test_model
+    data_dir = args.data_dir
+    model_dir = args.model_dir
+    output_dir = args.output_dir
 
     os.makedirs(output_dir, exist_ok=True)
 
-    inference(data_dir, model_dir, output_dir, cfg)
+    inference(data_dir, model_dir, output_dir, args)

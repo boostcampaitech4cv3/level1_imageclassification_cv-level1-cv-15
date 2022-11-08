@@ -17,22 +17,29 @@ from torch.utils.data import DataLoader
 from config import cfg
 import yaml
 from loss import make_loss
-from dataloader import make_dataloader
-from meter import AverageMeter
-
+from timm.scheduler.step_lr import StepLRScheduler
+from sklearn.metrics import f1_score
+from sampler import RandomIdentitySampler
 # from torch.cuda import amp
 
-from dataset import MaskBaseDataset   # dataset class import
-from loss.softmax_loss import create_criterion
-from model import BaseModel, ResNet34, ResNet152, EfficientNet_b7  # model.py에서 model class import
+from dataset import MaskBaseDataset,ImageDataset   # dataset class import
 from timm.scheduler.step_lr import StepLRScheduler
 from loss.softmax_loss import F1Loss
-from solver.make_optimizer import make_optimizer
 from solver.scheduler_factory import create_scheduler
 from sklearn.metrics import f1_score
 
-class_acc = {i : 0 for i in range(18)}
-cur_acc = {i : 0 for i in range(18)}
+def make_weights(labels, nclasses):
+    labels = np.array(labels) 
+    weight_arr = np.zeros_like(labels) 
+    
+    _, counts = np.unique(labels, return_counts=True) 
+    for cls in range(nclasses):
+        weight_arr = np.where(labels == cls, 1/counts[cls], weight_arr) 
+        # 각 클래스의의 인덱스를 산출하여 해당 클래스 개수의 역수를 확률로 할당한다.
+        # 이를 통해 각 클래스의 전체 가중치를 동일하게 한다.
+ 
+    return weight_arr
+
 
 def seed_everything(seed):
     torch.manual_seed(seed)
@@ -43,15 +50,6 @@ def seed_everything(seed):
     np.random.seed(seed)
     random.seed(seed)
 
-def class_check(labels,preds):
-    global class_acc, cur_acc
-    labels = labels.cpu().numpy()
-    preds = preds.cpu().numpy()
-    for idx,label in enumerate(labels):
-        if label == preds[idx] :
-            cur_acc[label] += 1
-        class_acc[label] += 1
-    
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
@@ -87,10 +85,13 @@ def grid_image(np_images, gts, preds, n=16, shuffle=False):
 
     return figure
 
+def custom_imshow(img):
+    img = img.cpu().numpy()
+    plt.imshow(np.transpose(img, (1, 2, 0)))
+    plt.show()
 
 def increment_path(path, exist_ok=False):
     """ Automatically increment path, i.e. runs/exp --> runs/exp0, runs/exp1 etc.
-
     Args:
         path (str or pathlib.Path): f"{model_dir}/{args.name}".
         exist_ok (bool): whether increment path (increment if False).
@@ -109,6 +110,11 @@ def increment_path(path, exist_ok=False):
 def train(data_dir, model_dir, args):
     seed_everything(args.seed)
 
+    if 'triplet' in args.loss_type:
+        triplet = True
+    else:
+        triplet = False
+
     # model 이란 폴더 안에서 하위폴더의 path index를 매 experiment마다 늘려줌
     save_dir = increment_path(os.path.join(model_dir, args.name))
 
@@ -118,7 +124,8 @@ def train(data_dir, model_dir, args):
     
     # 현재 arguments값을 config.json파일로 dump하기(나중에 hyperparameter값을 알기 위해)
     with open(os.path.join(save_dir, 'config.yml'), 'w', encoding='utf-8') as f:
-        yaml.dump(cfg, f)
+        yaml.dump(args,f)
+    
     # -- settings
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -126,7 +133,7 @@ def train(data_dir, model_dir, args):
     # -- dataset
     dataset_module = getattr(import_module("dataset"), args.dataset)  # default: MaskBaseDataset
     dataset = dataset_module(
-        data_dir=data_dir,
+        data_dir = data_dir
     )
     num_classes = dataset.num_classes  # 18
 
@@ -139,74 +146,77 @@ def train(data_dir, model_dir, args):
     )
     dataset.set_transform(transform)
 
-    # -- data_loader
     train_set, val_set = dataset.split_dataset() # dataset
-    #print(train_set.indices)
 
-    #weights=make_weights(train_set.targets,18)
-    #sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
+    if triplet :
+        train_set = ImageDataset(dataset.train_image_with_ID, transform) 
+        
+        train_loader = DataLoader(
+            train_set,
+            batch_size=args.batch_size,
+            num_workers=multiprocessing.cpu_count() // 2,
+            shuffle=False,
+            sampler=RandomIdentitySampler(train_set, args),
+            pin_memory=use_cuda,
+            drop_last=True,
+        )
 
+    else :
 
-    train_loader = DataLoader(
-        train_set,
-        batch_size=args.batch_size,
-        num_workers=multiprocessing.cpu_count() // 2,
-        shuffle=False,
-        #sampler=sampler,
-        pin_memory=use_cuda,
-        drop_last=True,
-    )
+        train_loader = DataLoader(
+            train_set,
+            batch_size=args.batch_size,
+            num_workers=multiprocessing.cpu_count() // 2,
+            shuffle=False,
+            # sampler=sampler,
+            pin_memory=use_cuda,
+            drop_last=True,
+        )
 
     val_loader = DataLoader(
         val_set,
-        batch_size=32,
+        batch_size=args.batch_size,
         num_workers=multiprocessing.cpu_count() // 2,
         shuffle=False,
+        # sampler=sampler,
         pin_memory=use_cuda,
-        drop_last=False,
+        drop_last=True,
     )
-
     # -- model
     model_module = getattr(import_module("model"), args.model)  # default: BaseModel
     model = model_module(
-        num_classes=num_classes
+        num_classes = num_classes,
+        pretrained = True,
+        triplet = triplet,
     ).to(device)
     model = torch.nn.DataParallel(model)
 
-    # -- loss & metric
-    # criterion = create_criterion(args.criterion)  # default: cross_entropy
-    #criterion=FocalLoss(gamma=2)
-    criterion=F1Loss()
-    # criterion=torch.nn.CrossEntropyLoss()
-    if args.optimizer!='sam':
-        opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
-        optimizer = opt_module(
-            filter(lambda p: p.requires_grad, model.parameters()),
-            lr=args.base_lr,
-            weight_decay=5e-4
-        )
+    criterion = make_loss(args,num_classes = num_classes)
+    # val_criterion = torch.nn.CrossEntropyLoss()
 
-
-    #optimizer=AdamP(model.parameters(),lr=args.lr)
-
-    #scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
+    opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
+    optimizer = opt_module(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=args.base_lr,
+        weight_decay=5e-4
+    )
+    if args.scheduler =='cos':
+        scheduler = create_scheduler(args,optimizer)
+    else:
+        scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
     
-    scheduler = StepLRScheduler(
-            optimizer,
-            decay_t=args.lr_decay_step,
-            decay_rate=0.5,
-            warmup_lr_init=2e-08,
-            warmup_t=5,
-            t_in_epochs=False,
-        )
-    # -- Tensorboard logging
-    # logger = SummaryWriter(log_dir=save_dir)
-
+    # scheduler = StepLRScheduler(
+    #         optimizer,
+    #         decay_t=args.lr_decay_step,
+    #         decay_rate=0.5,
+    #         warmup_lr_init=2e-08,
+    #         warmup_t=5,
+    #         t_in_epochs=False,
+    #     )
 
 
     best_val_acc = 0
-    best_val_loss = np.inf
-
+    best_val_f1 = 0
     patience=0
 
     for epoch in range(args.epochs):
@@ -218,22 +228,35 @@ def train(data_dir, model_dir, args):
             inputs, labels = train_batch
             inputs = inputs.to(device)
             labels = labels.to(device)
+            #v=random.randint(1,2)
+            # print(labels)
             optimizer.zero_grad()
+            if triplet:
+                if "Attention" in args.loss_type:
+                    feat,score = model(inputs)
+                    loss,ce_loss,tri_loss = criterion(score,feat,labels,model.module.fc.state_dict()['weight'])
+                else:
+                    feat,score = model(inputs)
+                    loss,ce_loss,tri_loss = criterion(score,feat,labels)
 
-            outs=model(inputs)
-            loss=criterion(outs,labels)
+            else:
+                score = model(inputs)
+                loss= criterion(score,labels)
 
             loss.backward()
             optimizer.step()
 
-            preds = torch.argmax(outs, dim=-1)
+            preds = torch.argmax(score, dim=-1)
 
             loss_value += loss.item()
             matches += (preds == labels).sum().item()
             if (idx + 1) % args.log_interval == 0:
                 train_loss = loss_value / args.log_interval
                 train_acc = matches / args.batch_size / args.log_interval
-                current_lr = get_lr(optimizer)
+                if args.scheduler == 'cos':
+                    current_lr = scheduler._get_lr(epoch+1)[0]
+                else:
+                    current_lr = get_lr(optimizer)
                 print(
                     f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
@@ -241,25 +264,40 @@ def train(data_dir, model_dir, args):
 
                 loss_value = 0
                 matches = 0
-
-
+        if args.wandb:
+            if args.scheduler == 'cos':
+                wandb.log({ 'Train Epoch': epoch, 
+                            'Total Loss' : train_loss, 
+                            'CE Loss' : ce_loss,
+                            'Tri Loss' : tri_loss,
+                            'Learning rate': scheduler._get_lr(epoch+1)[0],
+                            'Train Acc': train_acc})
+            else :
+                wandb.log({ 'Train Epoch': epoch, 
+                            'Total Loss' : train_loss, 
+                            'CE Loss' : ce_loss,
+                            'Tri Loss' : tri_loss,
+                            'Learning rate': get_lr(optimizer),
+                            'Train Acc': train_acc})
+        # if args.scheduler=='cos':
+        #     scheduler.step(epoch+1)
+        # else:
+        #     scheduler.step()
         scheduler.step_update(epoch + 1)
         #if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         
-        # val loop
-
-        #if not (epoch + 1) % args.validation_interval : # Validation 하는 주기는 알아서 바꿔서 해도 될듯!
         # val loop
         corrects=[0]*18
         totals=[0]*18
 
         target_list=[]
         pred_list=[]
+
         with torch.no_grad():
 
                 print("Calculating validation results...")
                 model.eval()
-                val_loss_items = []
+                # val_loss_items = []
                 val_acc_items = []
                 figure = None
 
@@ -272,15 +310,20 @@ def train(data_dir, model_dir, args):
                         la=la.item()
                         totals[la]+=1
 
-                    outs = model(inputs)
+                    if triplet:
+                        feat,outs = model(inputs)
+                        # tot_loss,ce_loss,tri_loss = criterion(outs,feat,labels)
+                    else:
+                        outs = model(inputs)
+                        # loss = criterion(outs,labels)
                     preds = torch.argmax(outs, dim=-1)
 
                     pred_list.extend(preds.cpu().detach().numpy())
                     target_list.extend(labels.cpu().detach().numpy())
 
-                    loss_item = criterion(outs, labels).item()
+                    # loss_item = criterion(outs, labels).item()
                     acc_item = (labels == preds).sum().item()
-                    val_loss_items.append(loss_item)
+                    # val_loss_items.append(loss_item)
                     val_acc_items.append(acc_item)
                     
                     val_f1=f1_score(np.array(target_list),np.array(pred_list),average='macro')
@@ -299,33 +342,32 @@ def train(data_dir, model_dir, args):
                         )
                 for ind,(c,t) in enumerate(zip(corrects,totals)):
                     print(f'label {ind}:{c/t:4.2%}')
+                    if args.wandb:
+                        wandb.log({f'label {ind}': c/t}) 
 
-
-                val_loss = np.sum(val_loss_items) / len(val_loader)
+                # val_loss = np.sum(val_loss_items) / len(val_loader)
                 val_acc = np.sum(val_acc_items) / len(val_set)
-                best_val_loss = min(best_val_loss, val_loss)
+                # best_val_loss = min(best_val_loss, val_loss)
                 
-                if val_acc > best_val_acc:
-                    print(f"New best model for val accuracy in epoch {epoch}: {val_acc:4.2%}! saving the best model..")
+                if val_f1 > best_val_f1:
+                    print(f"New best model for val f1 in epoch {epoch}: {val_acc:4.2%}! saving the best model..")
                     torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
+                    best_val_f1 = val_f1
+                if val_acc > best_val_acc:
                     best_val_acc = val_acc
-                else:
-                    patience+=1
+                # else:
+                #     patience+=1
                 torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
                 print(
-                    f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
-                    f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} ||"
+                    # f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
+                    f"best acc : {best_val_acc:4.2%} ||"
                     f"f1_score: {val_f1:4.2%}"
                 )            
-        
-        if patience==5:
-            break
+                if args.wandb:
+                      wandb.log({ 'val_acc': val_acc, 
+                                'val_f1' : val_f1, 
+                                })
 
-                # Tensorboard
-                # logger.add_scalar("Val/loss", val_loss, epoch)
-                # logger.add_scalar("Val/accuracy", val_acc, epoch)
-                # logger.add_figure("results", figure, epoch)
-        print()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Mask face classification")
@@ -341,6 +383,6 @@ if __name__ == '__main__':
     model_dir = cfg.model_dir
     
     if cfg.wandb:
-        wandb.init(project="CV_competition", entity="panda0728",config=cfg)
-
+        #wandb.init(project="CV_competition", entity="panda0728",config=cfg)
+        wandb.init(project="Test",entity="",config=cfg)
     train(data_dir, model_dir, cfg)

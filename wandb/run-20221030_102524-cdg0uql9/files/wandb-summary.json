@@ -1,1 +1,0 @@
-{"Train Epoch": 100, "Train Loss": 6.829827270848909e-06, "Learning rate": 7e-07, "Train Acc": 1.0, "_timestamp": 1667133714.2919166, "_runtime": 8189.495287656784, "_step": 1897, "Val Epoch": 100, "Val oss": 1.9121390093328818, "Val Acc": 0.7994730679156908, "_wandb": {"runtime": 8188}}

@@ -250,11 +250,8 @@ class TripletAttentionLoss(object):
         y = dist_an.new().resize_as_(dist_an).fill_(1)
 
         if self.margin is not None:
-            Triplet_loss = (
-                self.ranking_loss(dist_an.detach(), dist_ap, y) # requires_grad = false
-                + self.ranking_loss(dist_an_mean, dist_ap.detach(), y)
-                + self.ranking_loss(dist_neg, dist_pos, y)
-            )  # NEWTH
+            Triplet_loss = self.ranking_loss(dist_neg, dist_pos, y)
+       
             # loss = self.ranking_loss(dist_an.detach(), dist_ap, y) + self.ranking_loss(
             #     dist_neg, dist_pos, y
             # )  # EWTH
