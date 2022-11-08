@@ -1,0 +1,70 @@
+# Augmentation
+
+random_erase : False
+
+# Model Hyperparams
+
+seed : 42
+epochs : 50
+dataset : 'MaskSplitByProfileDataset' # MaskDataset, MaskSplitByProfileDataset
+augmentation : 'CustomAugmentation'
+cropsize : [320,256]
+resize : [380,380]
+batch_size : 32
+model : "EfficientNet_b0" 
+
+# Optimizer
+
+optimizer : 'Adam'
+base_lr : 0.0001
+weight_decay : 1e-4
+weight_decay_bias : 1e-4
+bias_lr_factor : 2
+warmup_epochs : 5
+warmup_factor : 0.01
+warmup_method : 'linear'
+
+# Training
+
+val_ratio : 0.2
+lr_decay_step : 20
+log_interval : 20
+name : 'exp17'
+
+# Validation
+
+validation_interval : 1
+valid_batch_size : 64
+
+# Sampler
+
+undersample_id : [0,1,3,4]
+undersample_rate : 3
+oversample_id : [2, 5, 8, 11, 14, 17]
+oversample_rate : 5
+
+# Loss
+
+num_instance : 4
+loss_type : 'f1_triplet' # attention_triplet, triplet
+ID_loss_weight : 0.5
+Tri_loss_weight : 0.5
+label_smooth : False
+margin : 0.7
+
+# Test
+
+test_data_dir : '/opt/ml/input/data/eval'
+test_batch_size : 64
+test_model : 'exp16'
+
+# WANDB
+ 
+wandb : False
+
+# Container environment
+
+data_dir : '/opt/ml/input/data/train/images'
+model_dir : './model_output/EfficientNet_b0'
+output_dir : './inference_output'
+
